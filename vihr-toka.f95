@@ -26,7 +26,7 @@ program vihrToka
     integer, parameter:: n=12, m=9
     integer, parameter::topWallPoint= nint(m * 2./3)
     integer, parameter::bottomWallPoint= nint(m/3.) + 1
-    integer, parameter::rightWallPoint = nint(n/3.) + 1
+    integer, parameter::rightWallPoint = nint(n/3.)
      
     real, parameter::dt=0.01
 
@@ -45,37 +45,24 @@ program vihrToka
     real x,y, tokConvergence, Ux1, Ux2
     integer lowerBoundary, upperBoundary, leftBoundary, rightBoundary
     tokConvergence = 0
-    x=4
+    x=3
     y=3
-    Ux1=0.2
-    Ux2=0.6
+    Ux1=1
+    Ux2=1
 
     dy = y/(m-1)
     dx = x/(n-1)
 
-    ! Начальные условия левая стенка
-    do j=1, m
+    ! Начальные/граничные условия условия левая стенка
+    call setBoundaryTokValue(n, m, tok, bottomWallPoint, topWallPoint, rightWallPoint, dy, Ux1, Ux2, y);
 
-        if (j > 1 .AND. j <= m * 1/3) then
-            tok(1, j) = (j - 1) * dy * Ux1  ! Нижний вход Ux1
-        else if (j > m * 1/3 .AND. j <= topWallPoint) then 
-            tok(1:(n/4 + 1), j) = (j - 1) * dy ! Установка внутренней стенки
-        else if (j > topWallPoint .AND. j < m) then 
-            tok(1, j) = (j - 1) * dy * Ux2 ! Верхний вход Ux2
-        else
-            tok(1, j) = (j - 1) * dy ! Стенки (границы)
-        endif
-
-    enddo
-    tok(1:n, m) = y
-
-    tokConvergence = calcConvergence(n, m, tok, tokn1)
-    call PrintArray(n, m, tok)
+    tokConvergence = calcConvergence(n, m, tok, tokn1) ! получаем начальную сходимость, чтобы войти в цикл
+    call PrintArray(n, m, tok) ! это для отладки
     do while (tokConvergence .GT. 0.001)
 
         ! по X
         ! c j = 2 до j = m*1/3 | i = 2 до i = n - 1
-        do j=2, m*1/3
+        do j=2, bottomWallPoint-1
             leftBoundary = 1
             rightBoundary = n
 
@@ -99,8 +86,8 @@ program vihrToka
         enddo
 
         ! c j = m*1/3+1 до j = m*2/3 | i = n/4 + 2 до i = n - 1
-        do j=m*1/3+1, topWallPoint
-            leftBoundary = n/4 + 1
+        do j=bottomWallPoint, topWallPoint
+            leftBoundary = rightWallPoint
             rightBoundary = n
 
             do i= leftBoundary + 1, rightBoundary - 1
@@ -148,9 +135,9 @@ program vihrToka
 
         ! по Y
         ! c i = 1 до i = n/4 + 1 | c j = 2 до j = m*1/3 
-        do i=2, n/4 + 1
+        do i=2, rightWallPoint
             lowerBoundary = 1
-            upperBoundary = m*1/3 + 1;
+            upperBoundary = bottomWallPoint;
 
             do j= lowerBoundary + 1, upperBoundary - 1 
                 a(j) = 1./dy**2
@@ -171,7 +158,7 @@ program vihrToka
             enddo
         enddo
         ! c i = n/4 + 2 до i = n-1 | c j = 2 до j = m-1
-        do i= n/4 + 2, n-1
+        do i= rightWallPoint + 1, n-1
             lowerBoundary = 1
             upperBoundary = m
 
@@ -195,7 +182,7 @@ program vihrToka
         enddo
 
         ! c i = 2 до i = n/4 + 1 | c j = m*2/3+1 до j = m-1
-        do i= 2, n/4 + 1
+        do i= 2, rightWallPoint
             lowerBoundary = topWallPoint
             upperBoundary = m
 
@@ -218,25 +205,11 @@ program vihrToka
             enddo
         enddo
 
-        ! Начальные условия левая стенка
-        do j=1, m
-
-            if (j > 1 .AND. j <= m * 1/3) then
-                tokn1(1, j) = (j - 1) * dy * Ux1 ! Нижний вход Ux1
-            else if (j > m * 1/3 .AND. j <= topWallPoint) then
-                tokn1(1:(n/4 + 1), j) = (j - 1) * dy ! Установка внутренней стенки
-            else if (j > topWallPoint .AND. j < m) then 
-                tokn1(1, j) = (j - 1) * dy * Ux2 ! Верхний вход Ux2
-            else
-                tokn1(1, j) = (j - 1) * dy ! Стенки (границы)
-            endif
-    
-            tokn1(n, j) = tokn1(n-1, j)
-        enddo
-        tokn1(1:n, m) = y
+        ! Начальные/граничные условия условия левая стенка
+        call setBoundaryTokValue(n, m, tokn1, bottomWallPoint, topWallPoint, rightWallPoint, dy, Ux1, Ux2, y);
 
         tokConvergence = calcConvergence(n, m, tok, tokn1)
-        print *, tokConvergence;
+        ! print *, tokConvergence;
 
         vihr = vihrn1;
         
@@ -272,6 +245,7 @@ SUBROUTINE Tom(i0, iN, a, b, c, d, e, mi, ma)
 
     end
 
+! это для отладки
 subroutine PrintArray(n, m, arr)
     integer n, m
     real,dimension (n, m):: arr
@@ -299,3 +273,33 @@ function calcConvergence(n, m, arr, arrn1)
     enddo
 
     end function calcConvergence
+
+subroutine setBoundaryTokValue(n, m, tok, bottomWallPoint, topWallPoint, rightWallPoint, dy, Ux1, Ux2, y)
+    integer n, m, bottomWallPoint, topWallPoint, rightWallPoint
+    real,dimension (n, m):: tok
+    real dy, Ux1, Ux2
+
+    do j=1, m
+
+        if (j > 1 .AND. j < bottomWallPoint) then
+             ! Нижний вход Ux1
+            tok(1, j) = (j - 1) * dy * Ux1
+
+        else if (j >= bottomWallPoint .AND. j <= topWallPoint) then
+             ! Установка значений внутренних стенок и ее внутренней области
+            tok(1:rightWallPoint, j) = (j - 1) * dy
+
+        else if (j > topWallPoint .AND. j < m) then 
+             ! Верхний вход Ux2
+            tok(1, j) = (j - 1) * dy * Ux2
+
+        else
+             ! Левая граница верхняя и нижняя стенка (точка)
+            tok(1, j) = (j - 1) * dy
+        endif
+
+        tok(n, j) = tok(n-1, j) ! правая граница
+    enddo
+    tok(1:n, m) = y ! верхняя стенка
+
+    end
