@@ -1,4 +1,8 @@
 program vihrToka
+
+    character(100):: name
+
+
     !        y  ^
     !           '
     !           '
@@ -23,7 +27,7 @@ program vihrToka
     !                    '
     !                 ---'----------
     !                    ^-rightWallPoint
-    integer, parameter:: n=12, m=9
+    integer, parameter:: n=12, m=12
     integer, parameter::bottomWallPoint= nint(m/3.) + 1 ! j1
     integer, parameter::topWallPoint= nint(m * 2./3) ! j2
     integer, parameter::rightWallPoint = nint(n/3.) ! i2
@@ -42,14 +46,13 @@ program vihrToka
     ! vihrn1 -  вихря на n+1 слоей
     real, dimension(n, m):: vihr=0, vihrTemp=0, vihrn1=0
     real, dimension(n):: a=0, b=0, c=0, d=0, e=0
-    real x,y, tokConvergence, Ux1, Ux2
+    real x,y, tokConvergence, Ux1, Ux2, current_x, current_y
     integer lowerBoundary, upperBoundary, leftBoundary, rightBoundary
     tokConvergence = 0
     x=3
     y=3
     Ux1=1
     Ux2=1
-
     dy = y/(m-1)
     dx = x/(n-1)
 
@@ -58,6 +61,11 @@ program vihrToka
 
     tokConvergence = calcConvergence(n, m, tok, tokn1) ! получаем начальную сходимость, чтобы войти в цикл
     call PrintArray(n, m, tok) ! это для отладки
+
+    ! Вывод на консоль
+    print*,'Enter name of the file'
+    ! Считать значение с консоли
+    read(*,*) name
 
     ! start while
     do while (tokConvergence > 0.001)
@@ -226,7 +234,17 @@ program vihrToka
     enddo ! end while
 
     call PrintArray(n, m, tokn1)
-    
+
+    ! Запись в файл
+    open(23,file=trim(name)//'.dat')
+    do i=1, n
+        do j=1, m
+            current_x = (i-1)*dx
+            current_y = (j-1)*dy
+            write(23,'(3f9.5)') current_x, current_y, tok(i, j)
+            ! 23 format(3f9.5)
+        enddo
+    enddo
 
 end program vihrToka
 
