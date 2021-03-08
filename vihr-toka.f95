@@ -3,22 +3,22 @@ program vihrToka
     character(100):: name
 
 
-    !        y  ^
-    !           '
-    !           '
-    !       m   --------------
-    !   Ux2->      '
-    ! m * 2/3   ---'
-    !              |
-    ! m * 1/3+1 ---'    
-    !   Ux1->      '
-    !           --------------  --> x
-    !          0              n
-    ! Соотношений 4:3 (ширина:высота)
+    !        y   ^
+    !            '
+    !            '
+    !       m    --------------
+    !   Ux2->       '
+    ! m * y2/y   ---'
+    !               |
+    ! m * y1/y+1 ---'    
+    !   Ux1->       '
+    !            --------------  --> x
+    !           0              n
+    ! Соотношений 1:1(ширина:высота)
 
     ! Объявление констант
-    ! n - кол-во точе по x
-    ! m - кол-во точе по y
+    ! n - кол-во точек по x
+    ! m - кол-во точек по y
     !               m --------------
     !
     !    topWallPoint ---'
@@ -28,29 +28,28 @@ program vihrToka
     !                 ---'----------
     !                    ^-rightWallPoint
     integer, parameter:: n=12, m=12
-    integer, parameter::bottomWallPoint= nint(m/3.) + 1 ! j1
-    integer, parameter::topWallPoint= nint(m * 2./3) ! j2
-    integer, parameter::rightWallPoint = nint(n/3.) ! i2
+    real, parameter:: y=3, x=3, y1=1, y2=2, x1=1
+    integer, parameter::bottomWallPoint= nint(m * y1/y) + 1 ! j1
+    integer, parameter::topWallPoint= nint(m * y2/y) ! j2
+    integer, parameter::rightWallPoint = nint(n * x1/x) ! i2
      
     real, parameter::dt=0.01
 
     ! Объявление массивов
     ! tok - функция тока на n
     ! tokTemp - промежуточный слой 
-    ! tokn1 -  функция тока на n+1 слоей
+    ! tokn1 -  функция тока на n+1 слое
     real, dimension(n, m):: tok=0, tokTemp=0, tokn1=0
 
     ! Объявление массивов
     ! vihr - вихря на n
     ! vihrTemp - вихря промежуточный слой 
-    ! vihrn1 -  вихря на n+1 слоей
+    ! vihrn1 -  вихря на n+1 слое
     real, dimension(n, m):: vihr=0, vihrTemp=0, vihrn1=0
     real, dimension(n):: a=0, b=0, c=0, d=0, e=0
-    real x,y, tokConvergence, Ux1, Ux2, current_x, current_y
+    real tokConvergence, Ux1, Ux2, current_x, current_y
     integer lowerBoundary, upperBoundary, leftBoundary, rightBoundary
     tokConvergence = 0
-    x=3
-    y=3
     Ux1=1
     Ux2=1
     dy = y/(m-1)
@@ -313,9 +312,13 @@ subroutine setBoundaryTokValue(n, m, tok, bottomWallPoint, topWallPoint, rightWa
              ! Нижний вход Ux1
             tok(1, j) = (j - 1) * dy * Ux1
 
-        else if (j >= bottomWallPoint .AND. j <= topWallPoint) then
-             ! Установка значений внутренних стенок и ее внутренней области
+        else if (j == bottomWallPoint .OR. j == topWallPoint) then
+            ! Установка нижней и верхней внутренней стенки
             tok(1:rightWallPoint, j) = (j - 1) * dy
+
+        else if (j > bottomWallPoint .AND. j < topWallPoint) then
+             ! Установка внутренний правой стенки
+            tok(rightWallPoint, j) = (j - 1) * dy
 
         else if (j > topWallPoint .AND. j < m) then 
              ! Верхний вход Ux2
