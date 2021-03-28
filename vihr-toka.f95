@@ -58,7 +58,7 @@ program vihrToka
     ! Начальные/граничные условия условия левая стенка
     call setBoundaryTokValue(n, m, tok, bottomWallPoint, topWallPoint, rightWallPoint, dy, Ux1, Ux2, y);
 
-    tokConvergence = calcConvergence(n, m, tok, tokn1) ! получаем начальную сходимость, чтобы войти в цикл
+    tokConvergence = calcConvergence(n, m, tok, tokn1, dt) ! получаем начальную сходимость, чтобы войти в цикл
     call PrintArray(n, m, tok) ! это для отладки
 
     ! Вывод на консоль
@@ -87,7 +87,7 @@ program vihrToka
             a(rightBoundary) = 1; b(rightBoundary)  = 1; c(rightBoundary) = 0; d(rightBoundary) = 0;
 
             ! Вызов прогонки
-            call Tom(leftBoundary, rightBoundary, a, b, c, d, e, leftBoundary, rightBoundary)
+            call Tom(leftBoundary, rightBoundary, a, b, c, d, e, 1, max(n,m))
 
             ! Присваивам в промежуточный слой
             do i=leftBoundary, rightBoundary
@@ -112,7 +112,7 @@ program vihrToka
             a(rightBoundary) = 1; b(rightBoundary) = 1; c(rightBoundary) = 0; d(rightBoundary) = 0;
 
             ! Вызов прогонки
-            call Tom(leftBoundary, rightBoundary, a, b, c, d, e, leftBoundary, rightBoundary)
+            call Tom(leftBoundary, rightBoundary, a, b, c, d, e, 1, max(n,m))
 
             ! Присваивам в промежуточный слой
             do i=leftBoundary, rightBoundary
@@ -137,7 +137,7 @@ program vihrToka
             a(rightBoundary) = 1; b(rightBoundary) = 1; c(rightBoundary) = 0; d(rightBoundary) = 0;
 
             ! Вызов прогонки
-            call Tom(leftBoundary, rightBoundary, a, b, c, d, e, leftBoundary, rightBoundary)
+            call Tom(leftBoundary, rightBoundary, a, b, c, d, e, 1, max(n,m))
 
             ! Присваивам в промежуточный слой
             do i=leftBoundary, rightBoundary
@@ -163,11 +163,11 @@ program vihrToka
             a(upperBoundary) = 0; b(upperBoundary) = 1; c(upperBoundary) = 0; d(upperBoundary) = tok(i, upperBoundary);
 
             ! Вызов прогонки
-            call Tom(lowerBoundary, upperBoundary, a, b, c, d, e, lowerBoundary, upperBoundary)
+            call Tom(lowerBoundary, upperBoundary, a, b, c, d, e, 1, max(n,m))
 
             ! Присваивам в промежуточный слой
             do j= lowerBoundary, upperBoundary 
-                tokn1(i, j) = e(i)
+                tokn1(i, j) = e(j)
             enddo
         enddo
 
@@ -188,11 +188,11 @@ program vihrToka
             a(upperBoundary) = 0; b(upperBoundary) = 1; c(upperBoundary) = 0; d(upperBoundary) = tok(i, upperBoundary);
 
             ! Вызов прогонки
-            call Tom(lowerBoundary, upperBoundary, a, b, c, d, e, lowerBoundary, upperBoundary)
+            call Tom(lowerBoundary, upperBoundary, a, b, c, d, e, 1, max(n,m))
 
             ! Присваивам в промежуточный слой
             do j= lowerBoundary, upperBoundary 
-                tokn1(i, j) = e(i)
+                tokn1(i, j) = e(j)
             enddo
         enddo
 
@@ -213,18 +213,18 @@ program vihrToka
             a(upperBoundary) = 0; b(upperBoundary) = 1; c(upperBoundary) = 0; d(upperBoundary) = tok(i, upperBoundary);
 
             ! Вызов прогонки
-            call Tom(lowerBoundary, upperBoundary, a, b, c, d, e, lowerBoundary, upperBoundary)
+            call Tom(lowerBoundary, upperBoundary, a, b, c, d, e, 1, max(n,m))
 
             ! Присваивам в промежуточный слой
             do j= lowerBoundary, upperBoundary 
-                tokn1(i, j) = e(i)
+                tokn1(i, j) = e(j)
             enddo
         enddo
 
         ! Начальные/граничные условия условия левая стенка
         call setBoundaryTokValue(n, m, tokn1, bottomWallPoint, topWallPoint, rightWallPoint, dy, Ux1, Ux2, y);
 
-        tokConvergence = calcConvergence(n, m, tok, tokn1)
+        tokConvergence = calcConvergence(n, m, tok, tokn1, dt)
         print *, tokConvergence;
 
         vihr = vihrn1;
@@ -287,15 +287,15 @@ subroutine PrintArray(n, m, arr)
 
     end
 
-function calcConvergence(n, m, arr, arrn1)
+function calcConvergence(n, m, arr, arrn1, dt)
     integer n, m
     real,dimension (n, m):: arr, arrn1
-    real calcConvergence
+    real calcConvergence, dt
     calcConvergence = 0
 
     do j=2, m-1
         do i=2, n-1
-            calcConvergence = calcConvergence + abs(arrn1(i, j) - arr(i, j))
+            calcConvergence = calcConvergence + abs(arrn1(i, j) - arr(i, j)) / dt
         enddo
     enddo
 
