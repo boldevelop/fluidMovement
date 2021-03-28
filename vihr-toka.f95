@@ -339,13 +339,15 @@ subroutine calcVihrX(jStart, jEnd, leftBoundary, rightBoundary, n, m, vihrTemp, 
         enddo
 
         a(leftBoundary) = 0; b(leftBoundary) = 1; c(leftBoundary) = 0;
+        a(rightBoundary) = 1; b(rightBoundary)  = 1; c(rightBoundary) = 0;
+
         if (isMiddle) then
             d(leftBoundary) = 2 * (tokn1(leftBoundary + 1, j) - tokn1(leftBoundary, j)) / dx**2;
         else
             d(leftBoundary) = 0;
         endif
-        
-        a(rightBoundary) = 1; b(rightBoundary)  = 1; c(rightBoundary) = 0; d(rightBoundary) = 0;
+
+         d(rightBoundary) = 0;
 
         ! Вызов прогонки
         call Tom(leftBoundary, rightBoundary, a, b, c, d, e, 1, max(n,m))
