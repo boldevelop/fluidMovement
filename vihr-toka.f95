@@ -326,15 +326,16 @@ subroutine calcVihrX(jStart, jEnd, leftBoundary, rightBoundary, n, m, vihrTemp, 
     logical:: isMiddle
     real Re
 
-    real:: Ux = 0
+    real:: Ux = 0, UxAbs = 0 
 
     do j=jStart, jEnd
 
         do i=leftBoundary+1, rightBoundary-1
             Ux = ( tokn1(i, j + 1) - tokn1(i, j - 1) ) / dy
-            a(i) = -Ux/dx - 1./Re/dx**2
-            c(i) = Ux/dx - 1./Re/dx**2
-            b(i) = 2./Re/dx**2 + 1./dt
+            UxAbs = abs(Ux)
+            a(i) = -(UxAbs + Ux)/dx/2 - 1./Re/dx**2
+            c(i) = -(UxAbs - Ux)/dx/2 - 1./Re/dx**2
+            b(i) = -UxAbs/dx + 2./Re/dx**2 + 1./dt
             d(i) = vihr(i, j)/dt
         enddo
 
@@ -366,15 +367,16 @@ subroutine calcVihrY(iStart, iEnd, lowerBoundary, upperBoundary, n, m, vihrn1, v
     real, dimension(n):: a, b, c, d, e
     real Re
 
-    real:: Uy = 0
+    real:: Uy = 0, UyAbs = 0 
 
     do i=iStart, iEnd
 
         do j= lowerBoundary + 1, upperBoundary - 1
             Uy = ( tokn1(i + 1, j) - tokn1(i - 1, j) ) / dx
-            a(i) = -Uy/dy - 1./Re/dy**2
-            c(i) = Uy/dy - 1./Re/dy**2
-            b(i) = 2./Re/dy**2 + 1./dt
+            UyAbs = abs(Uy)
+            a(i) = -(UyAbs + Uy)/dy/2 - 1./Re/dy**2
+            c(i) = -(UyAbs - Uy)/dy/2 - 1./Re/dy**2
+            b(i) = -UyAbs/dy + 2./Re/dy**2 + 1./dt
             d(j) = vihrTemp(i, j)/dt
         enddo
 
