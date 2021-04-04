@@ -306,36 +306,22 @@ subroutine setBoundaryTokValue(n, m, tok, bottomWallPoint, topWallPoint, rightWa
     real,dimension (n, m):: tok
     real dy, Ux1, Ux2
 
-    do j=1, m
-
-        if (j >= 1 .AND. j < bottomWallPoint) then
-             ! Нижний вход Ux1 и нижняя левая точка (стенка)
-            tok(1, j) = (j - 1) * dy * Ux1
-
-        else if (j == bottomWallPoint) then
-            ! Установка нижней стенки
-            tok(1:rightWallPoint, j) = (j - 1) * dy
-
-        else if (j > bottomWallPoint .AND. j < topWallPoint) then
-            ! Установка внутренний правой стенки
-           tok(rightWallPoint, j) = tok(1, bottomWallPoint)
-
-        else if (j == topWallPoint) then
-            ! Установка верхней внутренней стенки
-            tok(1:rightWallPoint, j) = tok(1, bottomWallPoint)
-
-        else if (j > topWallPoint .AND. j < m) then 
-             ! Верхний вход Ux2
-            tok(1, j) = tok(1, bottomWallPoint) + (j - topWallPoint) * dy * Ux2
-
-        else
-             ! Левая верняя точка (стенка)
-            tok(1, j) = tok(1, bottomWallPoint) + (j - topWallPoint) * dy * Ux2;
-        endif
-
-        tok(n, j) = tok(n-1, j) ! правая граница
-    enddo
-    tok(2:n, m) = tok(1, m) ! верхняя стенка
     tok(1:n, 1) = 0 ! нижняя стенка
+ 
+    do j = 1, bottomWallPoint
+        tok(1, j) = (j - 1) * dy * Ux1 ! нижний вход граничные
+    enddo
+
+    tok(1:rightWallPoint, bottomWallPoint) = tok(1, bottomWallPoint); ! нижняя внутренняя стенка
+    tok(rightWallPoint, bottomWallPoint:topWallPoint) = tok(1, bottomWallPoint) ! средний проход граничные
+    tok(1:rightWallPoint, topWallPoint) = tok(1, bottomWallPoint); ! верхняя внутренняя стенка
+
+    do j = topWallPoint + 1, m
+        tok(1, j) = tok(1, bottomWallPoint) + (j - topWallPoint) * dy * Ux2 ! верхний вход граничные
+    enddo
+
+    tok(2:n, m) = tok(1, m) ! верхняя стенка
+    
+    tok(n, 1:m) = tok(n-1, 1:m); ! правый выход
 
     end
