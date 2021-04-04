@@ -55,8 +55,8 @@ program vihrToka
     dy = y/(m-1)
     dx = x/(n-1)
 
-    ! Начальные/граничные условия условия левая стенка
-    call setBoundaryTokValue(n, m, tok, bottomWallPoint, topWallPoint, rightWallPoint, dy, Ux1, Ux2, y);
+    ! Начальные/граничные условия
+    call setBoundaryTokValue(n, m, tok, bottomWallPoint, topWallPoint, rightWallPoint, dy, Ux1, Ux2);
 
     tokConvergence = calcConvergence(n, m, tok, tokn1, dt) ! получаем начальную сходимость, чтобы войти в цикл
     call PrintArray(n, m, tok) ! это для отладки
@@ -72,157 +72,31 @@ program vihrToka
         ! по X
         ! c j = 2 до j = bottomWallPoint - 1
         !   i = 1 до i = n
-        do j=2, bottomWallPoint-1
-            leftBoundary = 1
-            rightBoundary = n
-
-            do i=leftBoundary+1, rightBoundary-1
-                a(i) = 1./dx**2
-                c(i) = 1./dx**2
-                b(i) = 1./dt + 2./dx**2
-                d(i) = tok(i, j)/dt + vihr(i, j)
-            enddo
-            
-            a(leftBoundary)  = 0; b(leftBoundary)   = 1; c(leftBoundary)  = 0; d(leftBoundary)  = tok(leftBoundary, j); 
-            a(rightBoundary) = 1; b(rightBoundary)  = 1; c(rightBoundary) = 0; d(rightBoundary) = 0;
-
-            ! Вызов прогонки
-            call Tom(leftBoundary, rightBoundary, a, b, c, d, e, 1, max(n,m))
-
-            ! Присваивам в промежуточный слой
-            do i=leftBoundary, rightBoundary
-                tokTemp(i, j) = e(i)
-            enddo
-        enddo
+        call calcTokX(2, bottomWallPoint-1, 1, n, n, m, tokTemp, tok, vihr, dx, dt)
 
         ! c j = bottomWallPoint    до j = topWallPoint
         !   i = rightWallPoint     до i = n
-        do j=bottomWallPoint, topWallPoint
-            leftBoundary  = rightWallPoint
-            rightBoundary = n
-
-            do i= leftBoundary + 1, rightBoundary - 1
-                a(i) = 1./dx**2
-                c(i) = 1./dx**2
-                b(i) = 1./dt + 2./dx**2
-                d(i) = tok(i, j)/dt + vihr(i, j)
-            enddo
-            
-            a(leftBoundary)  = 0; b(leftBoundary)  = 1; c(leftBoundary)  = 0; d(leftBoundary)  = tok(leftBoundary, j); 
-            a(rightBoundary) = 1; b(rightBoundary) = 1; c(rightBoundary) = 0; d(rightBoundary) = 0;
-
-            ! Вызов прогонки
-            call Tom(leftBoundary, rightBoundary, a, b, c, d, e, 1, max(n,m))
-
-            ! Присваивам в промежуточный слой
-            do i=leftBoundary, rightBoundary
-                tokTemp(i, j) = e(i)
-            enddo
-        enddo
+        call calcTokX(bottomWallPoint, topWallPoint, rightWallPoint, n, n, m, tokTemp, tok, vihr, dx, dt)
 
         ! c j = topWallPoint+1 до j = m-1
         !   i = 1              до i = n
-        do j=topWallPoint+1, m-1
-            leftBoundary = 1
-            rightBoundary = n
-
-            do i= leftBoundary + 1, rightBoundary - 1
-                a(i) = 1./dx**2
-                c(i) = 1./dx**2
-                b(i) = 1./dt + 2./dx**2
-                d(i) = tok(i, j)/dt + vihr(i, j)
-            enddo
-
-            a(leftBoundary)  = 0; b(leftBoundary)  = 1; c(leftBoundary)  = 0; d(leftBoundary)  = tok(leftBoundary, j); 
-            a(rightBoundary) = 1; b(rightBoundary) = 1; c(rightBoundary) = 0; d(rightBoundary) = 0;
-
-            ! Вызов прогонки
-            call Tom(leftBoundary, rightBoundary, a, b, c, d, e, 1, max(n,m))
-
-            ! Присваивам в промежуточный слой
-            do i=leftBoundary, rightBoundary
-                tokTemp(i, j) = e(i)
-            enddo
-        enddo
+        call calcTokX(topWallPoint+1, m-1, 1, n, n, m, tokTemp, tok, vihr, dx, dt)
 
         ! по Y
         ! c i = 2 до i = rightWallPoint
         ! c j = 1 до j = bottomWallPoint 
-        do i=2, rightWallPoint
-            lowerBoundary = 1
-            upperBoundary = bottomWallPoint;
-
-            do j= lowerBoundary + 1, upperBoundary - 1 
-                a(j) = 1./dy**2
-                c(j) = 1./dy**2
-                b(j) = 1./dt + 2./dy**2
-                d(j) = tokTemp(i, j)/dt
-            enddo
-            
-            a(lowerBoundary) = 0; b(lowerBoundary) = 1; c(lowerBoundary) = 0; d(lowerBoundary) = tok(i, lowerBoundary);
-            a(upperBoundary) = 0; b(upperBoundary) = 1; c(upperBoundary) = 0; d(upperBoundary) = tok(i, upperBoundary);
-
-            ! Вызов прогонки
-            call Tom(lowerBoundary, upperBoundary, a, b, c, d, e, 1, max(n,m))
-
-            ! Присваивам в промежуточный слой
-            do j= lowerBoundary, upperBoundary 
-                tokn1(i, j) = e(j)
-            enddo
-        enddo
+        call calcTokY(2, rightWallPoint, 1, bottomWallPoint, n, m, tokn1, tokTemp, tok, dy, dt)
 
         ! c i = rightWallPoint + 1 до i = n-1
         ! c j = 1                  до j = m
-        do i= rightWallPoint + 1, n-1
-            lowerBoundary = 1
-            upperBoundary = m
-
-            do j= lowerBoundary + 1, upperBoundary - 1 
-                a(j) = 1./dy**2
-                c(j) = 1./dy**2
-                b(j) = 1./dt + 2./dy**2
-                d(j) = tokTemp(i, j)/dt
-            enddo
-            
-            a(lowerBoundary) = 0; b(lowerBoundary) = 1; c(lowerBoundary) = 0; d(lowerBoundary) = tok(i, lowerBoundary);
-            a(upperBoundary) = 0; b(upperBoundary) = 1; c(upperBoundary) = 0; d(upperBoundary) = tok(i, upperBoundary);
-
-            ! Вызов прогонки
-            call Tom(lowerBoundary, upperBoundary, a, b, c, d, e, 1, max(n,m))
-
-            ! Присваивам в промежуточный слой
-            do j= lowerBoundary, upperBoundary 
-                tokn1(i, j) = e(j)
-            enddo
-        enddo
+        call calcTokY(rightWallPoint + 1, n-1, 1, m, n, m, tokn1, tokTemp, tok, dy, dt)
 
         ! c i = 2            до i = rightWallPoint
         ! c j = topWallPoint до j = m
-        do i=2, rightWallPoint
-            lowerBoundary = topWallPoint
-            upperBoundary = m
+        call calcTokY(2, rightWallPoint, topWallPoint, m, n, m, tokn1, tokTemp, tok, dy, dt)
 
-            do j= lowerBoundary + 1, upperBoundary - 1 
-                a(j) = 1./dy**2
-                c(j) = 1./dy**2
-                b(j) = 1./dt + 2./dy**2
-                d(j) = tokTemp(i, j)/dt
-            enddo
-            
-            a(lowerBoundary) = 0; b(lowerBoundary) = 1; c(lowerBoundary) = 0; d(lowerBoundary) = tok(i, lowerBoundary);
-            a(upperBoundary) = 0; b(upperBoundary) = 1; c(upperBoundary) = 0; d(upperBoundary) = tok(i, upperBoundary);
-
-            ! Вызов прогонки
-            call Tom(lowerBoundary, upperBoundary, a, b, c, d, e, 1, max(n,m))
-
-            ! Присваивам в промежуточный слой
-            do j= lowerBoundary, upperBoundary 
-                tokn1(i, j) = e(j)
-            enddo
-        enddo
-
-        ! Начальные/граничные условия условия левая стенка
-        call setBoundaryTokValue(n, m, tokn1, bottomWallPoint, topWallPoint, rightWallPoint, dy, Ux1, Ux2, y);
+        ! Начальные/граничные условия условия
+        call setBoundaryTokValue(n, m, tokn1, bottomWallPoint, topWallPoint, rightWallPoint, dy, Ux1, Ux2);
 
         tokConvergence = calcConvergence(n, m, tok, tokn1, dt)
         print *, tokConvergence;
@@ -301,7 +175,7 @@ function calcConvergence(n, m, arr, arrn1, dt)
 
     end function calcConvergence
 
-subroutine setBoundaryTokValue(n, m, tok, bottomWallPoint, topWallPoint, rightWallPoint, dy, Ux1, Ux2, y)
+subroutine setBoundaryTokValue(n, m, tok, bottomWallPoint, topWallPoint, rightWallPoint, dy, Ux1, Ux2)
     integer n, m, bottomWallPoint, topWallPoint, rightWallPoint
     real,dimension (n, m):: tok
     real dy, Ux1, Ux2
@@ -323,5 +197,87 @@ subroutine setBoundaryTokValue(n, m, tok, bottomWallPoint, topWallPoint, rightWa
     tok(2:n, m) = tok(1, m) ! верхняя стенка
     
     tok(n, 1:m) = tok(n-1, 1:m); ! правый выход
+
+    end
+
+subroutine setBoundaryVihrValue(n, m, vihr, tok, bottomWallPoint, topWallPoint, rightWallPoint, dy, dx)
+    integer n, m, bottomWallPoint, topWallPoint, rightWallPoint
+    real,dimension (n, m):: vihr, tok
+    real dy, dx
+
+    vihr(1, 2:bottomWallPoint - 1) = 0; ! нижний вход граничные
+
+    do j = bottomWallPoint, topWallPoint
+        vihr(rightWallPoint, j) = 2 * ( tok(rightWallPoint + 1, j) - tok(rightWallPoint, j) ) / dx**2; ! средний проход граничные
+    enddo
+
+    vihr(1, topWallPoint + 1:m - 1) = 0; ! верхний вход граничные
+
+    do i = 1, n
+        vihr(i, 1) = 2 * ( tok(i, 2) - tok(i, 1) ) / dy**2; ! нижняя стенка
+        vihr(i, m) = 2 * ( tok(i, m - 1) - tok(i, m) ) / dy**2; ! верхняя стенка
+    enddo
+
+    do i = 1, rightWallPoint
+        vihr(i, topWallPoint)    = 2 * ( tok(i, topWallPoint - 1)    - tok(i, topWallPoint)    ) / dy**2; ! верхняя внутренняя стенка
+        vihr(i, bottomWallPoint) = 2 * ( tok(i, bottomWallPoint - 1) - tok(i, bottomWallPoint) ) / dy**2; ! нижняя внутренняя стенка
+    enddo
+
+    vihr(n, 1:m) = vihr(n-1, 1:m); ! правый выход
+
+    end
+
+subroutine calcTokX(jStart, jEnd, leftBoundary, rightBoundary, n, m, tokTemp, tok, vihr, dx, dt)
+    integer n, m, jStart, jEnd, leftBoundary, rightBoundary
+    real, dimension(n):: a, b, c, d, e
+    real, dimension(n, m):: tokTemp, tok, vihr
+
+    do j=jStart, jEnd
+
+        do i=leftBoundary+1, rightBoundary-1
+            a(i) = 1./dx**2
+            c(i) = 1./dx**2
+            b(i) = 1./dt + 2./dx**2
+            d(i) = tok(i, j)/dt + vihr(i, j)
+        enddo
+        
+        a(leftBoundary)  = 0; b(leftBoundary)   = 1; c(leftBoundary)  = 0; d(leftBoundary)  = tok(leftBoundary, j); 
+        a(rightBoundary) = 1; b(rightBoundary)  = 1; c(rightBoundary) = 0; d(rightBoundary) = 0;
+
+        ! Вызов прогонки
+        call Tom(leftBoundary, rightBoundary, a, b, c, d, e, 1, max(n,m))
+        ! Присваивам в промежуточный слой
+        do i=leftBoundary, rightBoundary
+            tokTemp(i, j) = e(i)
+        enddo
+    enddo
+
+    end
+
+subroutine calcTokY(iStart, iEnd, lowerBoundary, upperBoundary, n, m, tokn1, tokTemp, tok, dy, dt)
+    integer n, m, iStart, iEnd, lowerBoundary, upperBoundary
+    real, dimension(n):: a, b, c, d, e
+    real, dimension(n, m):: tokn1, tokTemp, tok
+
+    do i=iStart, iEnd
+
+        do j= lowerBoundary + 1, upperBoundary - 1 
+            a(j) = 1./dy**2
+            c(j) = 1./dy**2
+            b(j) = 1./dt + 2./dy**2
+            d(j) = tokTemp(i, j)/dt
+        enddo
+        
+        a(lowerBoundary) = 0; b(lowerBoundary) = 1; c(lowerBoundary) = 0; d(lowerBoundary) = tok(i, lowerBoundary);
+        a(upperBoundary) = 0; b(upperBoundary) = 1; c(upperBoundary) = 0; d(upperBoundary) = tok(i, upperBoundary);
+
+        ! Вызов прогонки
+        call Tom(lowerBoundary, upperBoundary, a, b, c, d, e, 1, max(n,m))
+
+        ! Присваивам в n+1 слой
+        do j= lowerBoundary, upperBoundary 
+            tokn1(i, j) = e(j)
+        enddo
+    enddo
 
     end
