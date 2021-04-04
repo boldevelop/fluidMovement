@@ -1,7 +1,5 @@
 program vihrToka
-
     character(100):: name
-
 
     !        y   ^
     !            '
@@ -47,9 +45,10 @@ program vihrToka
     ! vihrn1 -  вихря на n+1 слое
     real, dimension(n, m):: vihr=0, vihrTemp=0, vihrn1=0
     real, dimension(n):: a=0, b=0, c=0, d=0, e=0
-    real tokConvergence, Ux1, Ux2, current_x, current_y, Ux, UxAbs, Uy, UyAbs
+    real tokConvergence, vihrConvergence, Ux1, Ux2, current_x, current_y, Ux, UxAbs, Uy, UyAbs
     integer lowerBoundary, upperBoundary, leftBoundary, rightBoundary
     tokConvergence = 0
+    vihrConvergence = 0
     Ux1=1
     Ux2=1
     dy = y/(m-1)
@@ -65,11 +64,7 @@ program vihrToka
     !call setBoundaryVihrValue(n, m, vihr, tok, bottomWallPoint, topWallPoint, rightWallPoint, dy, dx);
 
     tokConvergence = calcConvergence(n, m, tok, tokn1, dt) ! получаем начальную сходимость, чтобы войти в цикл
-    ! print *, "------ INITIAL BOUNDARY ------";
-    ! call PrintArray(n, m, tok) ! это для отладки
-    ! print *, "------ VIHR ------";
-    ! call PrintArray(n, m, vihr)
-    ! print *, "----- END INITIAL BOUNDARY --------"
+    vihrConvergence = 1 ! получаем начальную сходимость, чтобы войти в цикл
 
     ! Вывод на консоль
     print*,'Enter name of the file'
@@ -77,36 +72,37 @@ program vihrToka
     read(*,*) name
 
     ! start while
-    do while (tokConvergence > 0.001)
+    do while (vihrConvergence > 0.001)
 
-        ! по X
-        ! c j = 2 до j = bottomWallPoint - 1
-        !   i = 1 до i = n
-        call calcTokX(2, bottomWallPoint-1, 1, n, n, m, tokTemp, tok, vihr, dx, dt)
-
-        ! c j = bottomWallPoint    до j = topWallPoint
-        !   i = rightWallPoint     до i = n
-        call calcTokX(bottomWallPoint, topWallPoint, rightWallPoint, n, n, m, tokTemp, tok, vihr, dx, dt)
-
-        ! c j = topWallPoint+1 до j = m-1
-        !   i = 1              до i = n
-        call calcTokX(topWallPoint+1, m-1, 1, n, n, m, tokTemp, tok, vihr, dx, dt)
-
-        ! по Y
-        ! c i = 2 до i = rightWallPoint
-        ! c j = 1 до j = bottomWallPoint 
-        call calcTokY(2, rightWallPoint, 1, bottomWallPoint, n, m, tokn1, tokTemp, tok, dy, dt)
-
-        ! c i = rightWallPoint + 1 до i = n-1
-        ! c j = 1                  до j = m
-        call calcTokY(rightWallPoint + 1, n-1, 1, m, n, m, tokn1, tokTemp, tok, dy, dt)
-
-        ! c i = 2            до i = rightWallPoint
-        ! c j = topWallPoint до j = m
-        call calcTokY(2, rightWallPoint, topWallPoint, m, n, m, tokn1, tokTemp, tok, dy, dt)
-
-        ! Начальные/граничные условия условия
-        call setBoundaryTokValue(n, m, tokn1, bottomWallPoint, topWallPoint, rightWallPoint, dy, Ux1, Ux2);
+        tokConvergence = 1
+        ! start while
+        do while (tokConvergence > 0.001)
+            ! по X
+            ! c j = 2 до j = bottomWallPoint - 1
+            !   i = 1 до i = n
+            call calcTokX(2, bottomWallPoint-1, 1, n, n, m, tokTemp, tok, vihr, dx, dt)
+            ! c j = bottomWallPoint    до j = topWallPoint
+            !   i = rightWallPoint     до i = n
+            call calcTokX(bottomWallPoint, topWallPoint, rightWallPoint, n, n, m, tokTemp, tok, vihr, dx, dt)
+            ! c j = topWallPoint+1 до j = m-1
+            !   i = 1              до i = n
+            call calcTokX(topWallPoint+1, m-1, 1, n, n, m, tokTemp, tok, vihr, dx, dt)
+            ! по Y
+            ! c i = 2 до i = rightWallPoint
+            ! c j = 1 до j = bottomWallPoint 
+            call calcTokY(2, rightWallPoint, 1, bottomWallPoint, n, m, tokn1, tokTemp, tok, dy, dt)
+            ! c i = rightWallPoint + 1 до i = n-1
+            ! c j = 1                  до j = m
+            call calcTokY(rightWallPoint + 1, n-1, 1, m, n, m, tokn1, tokTemp, tok, dy, dt)
+            ! c i = 2            до i = rightWallPoint
+            ! c j = topWallPoint до j = m
+            call calcTokY(2, rightWallPoint, topWallPoint, m, n, m, tokn1, tokTemp, tok, dy, dt)
+            ! Начальные/граничные условия условия
+            call setBoundaryTokValue(n, m, tokn1, bottomWallPoint, topWallPoint, rightWallPoint, dy, Ux1, Ux2);
+            tokConvergence = calcConvergence(n, m, tok, tokn1, dt)
+            !print *, tokConvergence;
+            tok = tokn1;
+        enddo ! end while
 
         ! по X
         ! c j = 2 до j = bottomWallPoint - 1
@@ -116,7 +112,7 @@ program vihrToka
             rightBoundary = n
 
             do i=leftBoundary+1, rightBoundary-1
-                Ux = ( tokn1(i, j + 1) - tokn1(i, j - 1) ) / dy
+                Ux = ( tok(i, j + 1) - tok(i, j - 1) ) / dy
                 UxAbs = abs(Ux)
                 a(i) = -(UxAbs + Ux)/dx/2 - 1./Re/dx**2
                 c(i) = -(UxAbs - Ux)/dx/2 - 1./Re/dx**2
@@ -142,7 +138,7 @@ program vihrToka
             rightBoundary = n
 
             do i=leftBoundary+1, rightBoundary-1
-                Ux = ( tokn1(i, j + 1) - tokn1(i, j - 1) ) / dy
+                Ux = ( tok(i, j + 1) - tok(i, j - 1) ) / dy
                 UxAbs = abs(Ux)
                 a(i) = -(UxAbs + Ux)/dx/2 - 1./Re/dx**2
                 c(i) = -(UxAbs - Ux)/dx/2 - 1./Re/dx**2
@@ -153,7 +149,7 @@ program vihrToka
             a(leftBoundary) = 0;  b(leftBoundary)   = 1; c(leftBoundary)  = 0;  
             a(rightBoundary) = 1; b(rightBoundary)  = 1; c(rightBoundary) = 0;
 
-            d(leftBoundary) = 2 * (tokn1(leftBoundary + 1, j) - tokn1(leftBoundary, j)) / dx**2;
+            d(leftBoundary) = 2 * (tok(leftBoundary + 1, j) - tok(leftBoundary, j)) / dx**2;
             d(rightBoundary) = 0;
             ! Вызов прогонки
             call Tom(leftBoundary, rightBoundary, a, b, c, d, e, 1, max(n,m))
@@ -170,7 +166,7 @@ program vihrToka
             rightBoundary = n
 
             do i=leftBoundary+1, rightBoundary-1
-                Ux = ( tokn1(i, j + 1) - tokn1(i, j - 1) ) / dy
+                Ux = ( tok(i, j + 1) - tok(i, j - 1) ) / dy
                 UxAbs = abs(Ux)
                 a(i) = -(UxAbs + Ux)/dx/2 - 1./Re/dx**2
                 c(i) = -(UxAbs - Ux)/dx/2 - 1./Re/dx**2
@@ -197,7 +193,7 @@ program vihrToka
             upperBoundary = bottomWallPoint;
 
             do j= lowerBoundary + 1, upperBoundary - 1 
-                Uy = ( tokn1(i + 1, j) - tokn1(i - 1, j) ) / dx
+                Uy = ( tok(i + 1, j) - tok(i - 1, j) ) / dx
                 UyAbs = abs(Uy)
                 a(i) = -(UyAbs + Uy)/dy/2 - 1./Re/dy**2
                 c(i) = -(UyAbs - Uy)/dy/2 - 1./Re/dy**2
@@ -208,8 +204,8 @@ program vihrToka
             a(lowerBoundary) = 0; b(lowerBoundary) = 1; c(lowerBoundary) = 0;
             a(upperBoundary) = 0; b(upperBoundary) = 1; c(upperBoundary) = 0;
 
-            d(lowerBoundary) = 2 * ( tokn1(i, lowerBoundary + 1) - tokn1(i, lowerBoundary) ) / dy**2;
-            d(upperBoundary) = 2 * ( tokn1(i, upperBoundary) - tokn1(i, upperBoundary - 1) ) / dy**2;
+            d(lowerBoundary) = 2 * ( tok(i, lowerBoundary + 1) - tok(i, lowerBoundary) ) / dy**2;
+            d(upperBoundary) = 2 * ( tok(i, upperBoundary) - tok(i, upperBoundary - 1) ) / dy**2;
 
             ! Вызов прогонки
             call Tom(lowerBoundary, upperBoundary, a, b, c, d, e, 1, max(n,m))
@@ -226,7 +222,7 @@ program vihrToka
             upperBoundary = m;
 
             do j= lowerBoundary + 1, upperBoundary - 1 
-                Uy = ( tokn1(i + 1, j) - tokn1(i - 1, j) ) / dx
+                Uy = ( tok(i + 1, j) - tok(i - 1, j) ) / dx
                 UyAbs = abs(Uy)
                 a(i) = -(UyAbs + Uy)/dy/2 - 1./Re/dy**2
                 c(i) = -(UyAbs - Uy)/dy/2 - 1./Re/dy**2
@@ -237,8 +233,8 @@ program vihrToka
             a(lowerBoundary) = 0; b(lowerBoundary) = 1; c(lowerBoundary) = 0;
             a(upperBoundary) = 0; b(upperBoundary) = 1; c(upperBoundary) = 0;
 
-            d(lowerBoundary) = 2 * ( tokn1(i, lowerBoundary + 1) - tokn1(i, lowerBoundary) ) / dy**2;
-            d(upperBoundary) = 2 * ( tokn1(i, upperBoundary) - tokn1(i, upperBoundary - 1) ) / dy**2;
+            d(lowerBoundary) = 2 * ( tok(i, lowerBoundary + 1) - tok(i, lowerBoundary) ) / dy**2;
+            d(upperBoundary) = 2 * ( tok(i, upperBoundary) - tok(i, upperBoundary - 1) ) / dy**2;
 
             ! Вызов прогонки
             call Tom(lowerBoundary, upperBoundary, a, b, c, d, e, 1, max(n,m))
@@ -255,7 +251,7 @@ program vihrToka
             upperBoundary = m;
 
             do j= lowerBoundary + 1, upperBoundary - 1 
-                Uy = ( tokn1(i + 1, j) - tokn1(i - 1, j) ) / dx
+                Uy = ( tok(i + 1, j) - tok(i - 1, j) ) / dx
                 UyAbs = abs(Uy)
                 a(i) = -(UyAbs + Uy)/dy/2 - 1./Re/dy**2
                 c(i) = -(UyAbs - Uy)/dy/2 - 1./Re/dy**2
@@ -266,8 +262,8 @@ program vihrToka
             a(lowerBoundary) = 0; b(lowerBoundary) = 1; c(lowerBoundary) = 0;
             a(upperBoundary) = 0; b(upperBoundary) = 1; c(upperBoundary) = 0;
 
-            d(lowerBoundary) = 2 * ( tokn1(i, lowerBoundary + 1) - tokn1(i, lowerBoundary) ) / dy**2;
-            d(upperBoundary) = 2 * ( tokn1(i, upperBoundary) - tokn1(i, upperBoundary - 1) ) / dy**2;
+            d(lowerBoundary) = 2 * ( tok(i, lowerBoundary + 1) - tok(i, lowerBoundary) ) / dy**2;
+            d(upperBoundary) = 2 * ( tok(i, upperBoundary) - tok(i, upperBoundary - 1) ) / dy**2;
 
             ! Вызов прогонки
             call Tom(lowerBoundary, upperBoundary, a, b, c, d, e, 1, max(n,m))
@@ -279,22 +275,24 @@ program vihrToka
         enddo
 
         ! Начальные/граничные условия условия левая стенка
-        call setBoundaryVihrValue(n, m, vihrn1, tokn1, bottomWallPoint, topWallPoint, rightWallPoint, dy, dx);
+        call setBoundaryVihrValue(n, m, vihrn1, tok, bottomWallPoint, topWallPoint, rightWallPoint, dy, dx);
 
         vihrConvergence = calcConvergence(n, m, vihr, vihrn1, dt)
-        tokConvergence = calcConvergence(n, m, tok, tokn1, dt)
 
+        print *, "------Convergence-------";
         print *, tokConvergence;
         print *, vihrConvergence;
-        print *, "-------------";
+        print *, "------vihrn1-------";
+        call PrintArray(n, m, vihrn1)
+        print *, "------ConvergenceEND-------";
 
         vihr = vihrn1;
-        tok = tokn1;
-        
-        EXIT 
+
     enddo ! end while
 
+    print *, "------vihrn1-------";
     call PrintArray(n, m, vihrn1)
+    print *, "------vihrn1 END-------";
 
     ! Запись в файл
     open(23,file=trim(name)//'.dat')
@@ -455,7 +453,7 @@ subroutine calcTokY(iStart, iEnd, lowerBoundary, upperBoundary, n, m, tokn1, tok
             b(j) = 1./dt + 2./dy**2
             d(j) = tokTemp(i, j)/dt
         enddo
-        
+
         a(lowerBoundary) = 0; b(lowerBoundary) = 1; c(lowerBoundary) = 0; d(lowerBoundary) = tok(i, lowerBoundary);
         a(upperBoundary) = 0; b(upperBoundary) = 1; c(upperBoundary) = 0; d(upperBoundary) = tok(i, upperBoundary);
 
