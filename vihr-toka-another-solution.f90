@@ -1,13 +1,15 @@
   integer,parameter:: mx=201,my=101,ma=max(mx,my),mi=1
 
-  real, dimension(mx,my)::tet,tets,tet1,tet2,vi,vis,vi1,vi2,ux,uy
-  real, dimension(mx,my)::tok, tokTemp, tokConvergence, tokN1
+  real, dimension(mx,my)::ux,uy
+  real, dimension(mx,my):: theta, thetaTemp, thetaN1, thetaConvergence
+  real, dimension(mx,my):: vihr, vihrTemp, vihrN1, vihrConvergence
+  real, dimension(mx,my):: tok, tokTemp, tokN1, tokConvergence
   real, dimension(mi:ma)::a,b,c,d,e
 
-  character(100):: name
+  character(100):: file_prefix
   integer curIterationNum, printStepNumber, curPrintIterationNumber
 
-  namelist /Kanal_plosk/ Re, Pr, dt, dl_trub, dx, dy, sumTokConvergence, sumvi, sumtet
+  namelist /flat_channel/ Re, Pr, dt, pipeLenght, dx, dy, sumTokConvergence, sumVihrConvergence, sumThetaConvergence
 
 	!param----------------
   dt=0.002
@@ -18,12 +20,12 @@
   y2=0.6
   x1=0.5
 
-  dl_trub=4.
+  pipeLenght=4.
 
   dy=1./(my-1)
   dy2=dy*dy
 
-  dx=dl_trub/(mx-1)
+  dx=pipeLenght/(mx-1)
   dx2=dx*dx
   j1=nint(y1/dy)+1
   j2=nint(y2/dy)+1
@@ -33,12 +35,12 @@
   y2=(j2-1)*dy
 
   do j=2,j1-1
-    tet(1,j)=1.
+    thetaN1(1,j)=1.
   enddo
   do j=j2+1,my-1
-    tet(1,j)=0.
+    thetaN1(1,j)=0.
   enddo
-  tets=tet
+  theta=thetaN1
 
   ! Скорость на входе 
   do j=2,j1-1
@@ -51,28 +53,28 @@
   ! Граничные левый нижний вход ток
   do j=1,j1
     y=(j-1)*dy
-    tok(1,j)=y
+    tokN1(1,j)=y
   enddo
   do i=2,i1
-    tok(i,j1)=tok(1,j1) ! Нижняя стенка ток
+    tokN1(i,j1)=tokN1(1,j1) ! Нижняя стенка ток
   enddo
     
   do j=j1,j2
-    tok(i1,j)=tok(1,j1) ! Средняя стенка ток
+    tokN1(i1,j)=tokN1(1,j1) ! Средняя стенка ток
   enddo
   do i=1,i1
-    tok(i,j2)=tok(1,j1) ! Верхняя средняя стенка ток
+    tokN1(i,j2)=tokN1(1,j1) ! Верхняя средняя стенка ток
   enddo
   
   do j=j2+1,my
     y=(j-1)*dy ! Верхний вход
-    tok(1,j)=tok(1,j1)+y-y2 ! Сравнить с моей прогой
+    tokN1(1,j)=tokN1(1,j1)+y-y2 ! Сравнить с моей прогой
   enddo
   do i=2,mx
-    tok(i,my)=tok(1,my) ! Стенка сверху
-    tok(i,1)=0.  ! Стенка снизу
+    tokN1(i,my)=tokN1(1,my) ! Стенка сверху
+    tokN1(i,1)=0.  ! Стенка снизу
   enddo
-  tokN1=tok
+  tok=tokN1
     
   write(*,"('Number of iteration:')")
   read(*,*) iterationNum
@@ -94,10 +96,10 @@
         a(i)=1/dx2
         c(i)=1/dx2
         b(i)=1/dt+2/dx2
-        d(i)=tokN1(i,j)/dt-vi(i,j)
+        d(i)=tok(i,j)/dt-vihrN1(i,j)
       enddo !i
 
-      a(1)=0.;  b(1)=1.;   c(1)=0.;   d(1)=tokN1(1,j)
+      a(1)=0.;  b(1)=1.;   c(1)=0.;   d(1)=tok(1,j)
       a(mx)=1.; b(mx)=1.;  c(mx)=0.;  d(mx)=0.
 
       call Tom(1,mx,a,b,c,d,e,mi,ma)
@@ -113,10 +115,10 @@
         a(i)=1/dx2
         c(i)=1/dx2
         b(i)=1/dt+2/dx2
-        d(i)=tokN1(i,j)/dt-vi(i,j)
+        d(i)=tok(i,j)/dt-vihrN1(i,j)
       enddo !i
 
-      a(i1)=0.;  b(i1)=1.;   c(i1)=0.;   d(i1)=tokN1(i1,j)
+      a(i1)=0.;  b(i1)=1.;   c(i1)=0.;   d(i1)=tok(i1,j)
       a(mx)=1.; b(mx)=1.;  c(mx)=0.;  d(mx)=0.
 
       call Tom(i1,mx,a,b,c,d,e,mi,ma)
@@ -131,10 +133,10 @@
         a(i)=1/dx2
         c(i)=1/dx2
         b(i)=1/dt+2/dx2
-        d(i)=tokN1(i,j)/dt-vi(i,j)
+        d(i)=tok(i,j)/dt-vihrN1(i,j)
       enddo !i
 
-      a(1)=0.;  b(1)=1.;   c(1)=0.;   d(1)=tokN1(1,j)
+      a(1)=0.;  b(1)=1.;   c(1)=0.;   d(1)=tok(1,j)
       a(mx)=1.; b(mx)=1.;  c(mx)=0.;  d(mx)=0.
 
       call Tom(1,mx,a,b,c,d,e,mi,ma)
@@ -155,11 +157,11 @@
       enddo !i
 
       a(1)=0.;  b(1)=1.;   c(1)=0.;   d(1)=0.
-      a(j1)=0.; b(j1)=1.;  c(j1)=0.;  d(j1)=tokN1(i,j1)
+      a(j1)=0.; b(j1)=1.;  c(j1)=0.;  d(j1)=tok(i,j1)
 
       call Tom(1,j1,a,b,c,d,e,mi,ma)
       do j=1,j1
-        tok(i,j)=e(j)
+        tokN1(i,j)=e(j)
       enddo !i
     enddo 
     ! c i = 2            до i = rightWallPoint
@@ -172,12 +174,12 @@
         d(j)=tokTemp(i,j)/dt
       enddo !i
 
-      a(j2)=0.;  b(j2)=1.;   c(j2)=0.;   d(j2)=tokN1(i,j2)
-      a(my)=0.; b(my)=1.;  c(my)=0.;  d(my)=tokN1(i,my)
+      a(j2)=0.;  b(j2)=1.;   c(j2)=0.;   d(j2)=tok(i,j2)
+      a(my)=0.; b(my)=1.;  c(my)=0.;  d(my)=tok(i,my)
 
       call Tom(j2,my,a,b,c,d,e,mi,ma)
       do j=j2,my
-        tok(i,j)=e(j)
+        tokN1(i,j)=e(j)
       enddo !i
     enddo 
     ! c i = rightWallPoint + 1 до i = n-1
@@ -190,28 +192,28 @@
         d(j)=tokTemp(i,j)/dt
       enddo !i
 
-      a(1)=0.;  b(1)=1.;   c(1)=0.;   d(1)=tokN1(i,1)
-      a(my)=0.; b(my)=1.;  c(my)=0.;  d(my)=tokN1(i,my)
+      a(1)=0.;  b(1)=1.;   c(1)=0.;   d(1)=tok(i,1)
+      a(my)=0.; b(my)=1.;  c(my)=0.;  d(my)=tok(i,my)
 
       call Tom(1,my,a,b,c,d,e,mi,ma)
       do j=1,my
-        tok(i,j)=e(j)
+        tokN1(i,j)=e(j)
       enddo !i
     enddo 
 
     do j=2, my-1
-      tok(mx,j)=tok(mx-1,j) ! выход ток
+      tokN1(mx,j)=tokN1(mx-1,j) ! выход ток
     enddo
 
-    tokConvergence=tok-tokN1   
+    tokConvergence=tokN1-tok   
   
     do j=2, my-1
       do i=2,mx-1
         ! Кроме внутреннего блока из стенок
         ! Расчитываем скорость
         if(.not.(i<=i1.and.j>=j1.and.j<=j2)) then
-          ux(i,j)=(tok(i,j+1)-tok(i,j-1))/2/dy     
-          uy(i,j)=-(tok(i+1,j)-tok(i-1,j))/2/dx
+          ux(i,j)=(tokN1(i,j+1)-tokN1(i,j-1))/2/dy     
+          uy(i,j)=-(tokN1(i+1,j)-tokN1(i-1,j))/2/dx
         endif
       enddo
     enddo
@@ -250,8 +252,8 @@
         a(i)=(aux+ux(i,j))/2/dx+1/Re/dx2
         c(i)=(aux-ux(i,j))/2/dx+1./Re/dx2
         b(i)=1/dt+2/Re/dx2+aux/dx            
-        !  d(i)=vis(i,j)/dt+Gr/Re/Re*(tet(i,j+1)-tet(i,j-1))/2/dy
-        d(i)=vis(i,j)/dt-Gr/Re/Re*(tet(i+1,j)-tet(i-1,j))/2/dx
+        !  d(i)=vihr(i,j)/dt+Gr/Re/Re*(thetaN1(i,j+1)-thetaN1(i,j-1))/2/dy
+        d(i)=vihr(i,j)/dt-Gr/Re/Re*(thetaN1(i+1,j)-thetaN1(i-1,j))/2/dx
       enddo !i
 
       a(1)=0.;  b(1)=1.;   c(1)=0.;   d(1)=0.
@@ -260,7 +262,7 @@
       call Tom(1,mx,a,b,c,d,e,mi,ma)
 
       do i=1,mx
-        vi1(i,j)=e(i)
+        vihrTemp(i,j)=e(i)
       enddo !i
     enddo
     !---------x2
@@ -270,17 +272,17 @@
         a(i)=(aux+ux(i,j))/2/dx+1/Re/dx2
         c(i)=(aux-ux(i,j))/2/dx+1./Re/dx2
         b(i)=1/dt+2/Re/dx2+aux/dx            
-        !  d(i)=vis(i,j)/dt+Gr/Re/Re*(tet(i,j+1)-tet(i,j-1))/2/dy
-        d(i)=vis(i,j)/dt-Gr/Re/Re*(tet(i+1,j)-tet(i-1,j))/2/dx
+        !  d(i)=vihr(i,j)/dt+Gr/Re/Re*(thetaN1(i,j+1)-thetaN1(i,j-1))/2/dy
+        d(i)=vihr(i,j)/dt-Gr/Re/Re*(thetaN1(i+1,j)-thetaN1(i-1,j))/2/dx
       enddo !i
 
-      a(i1)=0.;  b(i1)=1.;   c(i1)=0.;   d(i1)=2*(tok(i1+1,j)-tok(i1,j))/dx2                        
+      a(i1)=0.;  b(i1)=1.;   c(i1)=0.;   d(i1)=2*(tokN1(i1+1,j)-tokN1(i1,j))/dx2                        
       a(mx)=1.; b(mx)=1.;  c(mx)=0.;  d(mx)=0.
 
       call Tom(i1,mx,a,b,c,d,e,mi,ma)                                                              
 
       do i=i1,mx
-        vi1(i,j)=e(i)
+        vihrTemp(i,j)=e(i)
       enddo !i
     enddo
     !!!!!!!!!x3
@@ -290,8 +292,8 @@
         a(i)=(aux+ux(i,j))/2/dx+1/Re/dx2
         c(i)=(aux-ux(i,j))/2/dx+1./Re/dx2
         b(i)=1/dt+2/Re/dx2+aux/dx            
-        !  d(i)=vis(i,j)/dt+Gr/Re/Re*(tet(i,j+1)-tet(i,j-1))/2/dy
-        d(i)=vis(i,j)/dt-Gr/Re/Re*(tet(i+1,j)-tet(i-1,j))/2/dx
+        !  d(i)=vihr(i,j)/dt+Gr/Re/Re*(thetaN1(i,j+1)-thetaN1(i,j-1))/2/dy
+        d(i)=vihr(i,j)/dt-Gr/Re/Re*(thetaN1(i+1,j)-thetaN1(i-1,j))/2/dx
       enddo !i
 
       a(1)=0.;  b(1)=1.;   c(1)=0.;   d(1)=0.
@@ -300,7 +302,7 @@
       call Tom(1,mx,a,b,c,d,e,mi,ma)
 
       do i=1,mx
-        vi1(i,j)=e(i)
+        vihrTemp(i,j)=e(i)
       enddo !i
     enddo
     !!!!!!!!!!!y1
@@ -310,16 +312,16 @@
         a(j)=(auy+uy(i,j))/2/dy+1/Re/dy2
         c(j)=(auy-uy(i,j))/2/dy+1/dy2/Re
         b(j)=2./dy2/re+1./dt+auy/dy
-        d(j)=vi1(i,j)/dt
+        d(j)=vihrTemp(i,j)/dt
       enddo !i
 
-      a(1)=0;  b(1)=1.;   c(1)=0;   d(1)=2*(tok(i,2)-tok(i,1))/dy2                         
-      a(j1)=0.; b(j1)=1.;  c(j1)=0.;  d(j1)=2*(tok(i,j1-1)-tok(i,j1))/dy2                 
+      a(1)=0;  b(1)=1.;   c(1)=0;   d(1)=2*(tokN1(i,2)-tokN1(i,1))/dy2                         
+      a(j1)=0.; b(j1)=1.;  c(j1)=0.;  d(j1)=2*(tokN1(i,j1-1)-tokN1(i,j1))/dy2                 
 
       call Tom(1,j1,a,b,c,d,e,mi,ma)
 
       do j=1,j1
-        vi(i,j)=e(j)
+        vihrN1(i,j)=e(j)
       enddo !i
       !!!!!!!!!!y2
     enddo
@@ -329,16 +331,16 @@
         a(j)=(auy+uy(i,j))/2/dy+1/Re/dy2
         c(j)=(auy-uy(i,j))/2/dy+1/dy2/Re
         b(j)=2./dy2/re+1./dt+auy/dy
-        d(j)=vi1(i,j)/dt
+        d(j)=vihrTemp(i,j)/dt
       enddo !i
 
-      a(j2)=0;  b(j2)=1.;   c(j2)=0;   d(j2)=2*(tok(i,j2+1)-tok(i,j2))/dy2                               
-      a(my)=0.; b(my)=1.;  c(my)=0.;  d(my)=2*(tok(i,my-1)-tok(i,my))/dy2
+      a(j2)=0;  b(j2)=1.;   c(j2)=0;   d(j2)=2*(tokN1(i,j2+1)-tokN1(i,j2))/dy2                               
+      a(my)=0.; b(my)=1.;  c(my)=0.;  d(my)=2*(tokN1(i,my-1)-tokN1(i,my))/dy2
 
       call Tom(j2,my,a,b,c,d,e,mi,ma)                                                             
 
       do j=j2,my
-        vi(i,j)=e(j)
+        vihrN1(i,j)=e(j)
       enddo !i
     enddo
     !!!!!!!!y3
@@ -348,27 +350,27 @@
         a(j)=(auy+uy(i,j))/2/dy+1/Re/dy2
         c(j)=(auy-uy(i,j))/2/dy+1/dy2/Re
         b(j)=2./dy2/re+1./dt+auy/dy
-        d(j)=vi1(i,j)/dt
+        d(j)=vihrTemp(i,j)/dt
       enddo !i
 
-      a(1)=0;  b(1)=1.;   c(1)=0;   d(1)=2*(tok(i,2)-tok(i,1))/dy2
-      a(my)=0.; b(my)=1.;  c(my)=0.;  d(my)=2*(tok(i,my-1)-tok(i,my))/dy2
+      a(1)=0;  b(1)=1.;   c(1)=0;   d(1)=2*(tokN1(i,2)-tokN1(i,1))/dy2
+      a(my)=0.; b(my)=1.;  c(my)=0.;  d(my)=2*(tokN1(i,my-1)-tokN1(i,my))/dy2
 
       call Tom(1,my,a,b,c,d,e,mi,ma)
 
       do j=1,my
-        vi(i,j)=e(j)
+        vihrN1(i,j)=e(j)
       enddo !i
     enddo
 
     !��� �� ���.
     do j=2,my-1
-      vi(mx,j)=vi(mx-1,j)
+      vihrN1(mx,j)=vihrN1(mx-1,j)
     enddo
     do j=j1, j2
-      vi(i1,j)=2*(tok(i1+1,j)-tok(i1,j))/dx2
+      vihrN1(i1,j)=2*(tokN1(i1+1,j)-tokN1(i1,j))/dx2
     enddo
-    vi2=vi-vis  
+    vihrConvergence=vihrN1-vihr  
 
     !------------�����������
                
@@ -381,7 +383,7 @@
           a(i)=(aux+ux(i,j))/2/dx+1/Re/Pr/dx2
           c(i)=(aux-ux(i,j))/2/dx+1./Re/Pr/dx2
           b(i)=1/dt+2/Re/Pr/dx2+aux/dx
-          d(i)=tets(i,j)/dt
+          d(i)=theta(i,j)/dt
         enddo !i
 
         a(1)=0.;  b(1)=1.;   c(1)=0.;   d(1)=1.                
@@ -390,7 +392,7 @@
         call Tom(1,mx,a,b,c,d,e,mi,ma)
 
         do i=1,mx
-          tet1(i,j)=e(i)
+          thetaTemp(i,j)=e(i)
         enddo !i
       enddo
       !------------x2
@@ -400,7 +402,7 @@
           a(i)=(aux+ux(i,j))/2/dx+1/Re/Pr/dx2
           c(i)=(aux-ux(i,j))/2/dx+1./Re/Pr/dx2
           b(i)=1/dt+2/Re/Pr/dx2+aux/dx
-          d(i)=tets(i,j)/dt
+          d(i)=theta(i,j)/dt
         enddo !i
 
         a(i1)=0.;  b(i1)=1.;   c(i1)=1.;   d(i1)=0.                 
@@ -409,7 +411,7 @@
         call Tom(i1,mx,a,b,c,d,e,mi,ma)
 
         do i=i1,mx
-          tet1(i,j)=e(i)
+          thetaTemp(i,j)=e(i)
         enddo !i
       enddo
       !!!x3
@@ -419,7 +421,7 @@
           a(i)=(aux+ux(i,j))/2/dx+1/Re/Pr/dx2
           c(i)=(aux-ux(i,j))/2/dx+1./Re/Pr/dx2
           b(i)=1/dt+2/Re/Pr/dx2+aux/dx
-          d(i)=tets(i,j)/dt
+          d(i)=theta(i,j)/dt
         enddo !i
 
         a(1)=0.;  b(1)=1.;   c(1)=0.;   d(1)=0. 
@@ -428,7 +430,7 @@
         call Tom(1,mx,a,b,c,d,e,mi,ma)
 
         do i=1,mx
-          tet1(i,j)=e(i)
+          thetaTemp(i,j)=e(i)
         enddo !i
       enddo
       !!!y1
@@ -438,7 +440,7 @@
           a(j)=(auy+uy(i,j))/2/dy+1/Re/Pr/dy2
           c(j)=(auy-uy(i,j))/2/dy+1/dy2/Re/Pr
           b(j)=2./dy2/re/Pr+1./dt+auy/dy
-          d(j)=tet1(i,j)/dt
+          d(j)=thetaTemp(i,j)/dt
         enddo !i
 
         a(1)=0.;  b(1)=1.;   c(1)=1.;   d(1)=0.                      
@@ -447,7 +449,7 @@
         call Tom(1,j1,a,b,c,d,e,mi,ma)
 
         do j=1,j1
-          tet(i,j)=e(j)
+          thetaN1(i,j)=e(j)
         enddo !i
       enddo
       !!y2
@@ -457,7 +459,7 @@
           a(j)=(auy+uy(i,j))/2/dy+1/Re/Pr/dy2
           c(j)=(auy-uy(i,j))/2/dy+1/dy2/Re/Pr
           b(j)=2./dy2/re/Pr+1./dt+auy/dy
-          d(j)=tet1(i,j)/dt
+          d(j)=thetaTemp(i,j)/dt
         enddo !i
 
         a(j2)=0.;  b(j2)=1.;   c(j2)=1.;   d(j2)=0. 
@@ -466,7 +468,7 @@
         call Tom(j2,my,a,b,c,d,e,mi,ma)
 
         do j=j2,my
-          tet(i,j)=e(j)   
+          thetaN1(i,j)=e(j)   
         enddo !i
       enddo
 
@@ -478,7 +480,7 @@
           a(j)=(auy+uy(i,j))/2/dy+1/Re/Pr/dy2
           c(j)=(auy-uy(i,j))/2/dy+1/dy2/Re/Pr
           b(j)=2./dy2/re/Pr+1./dt+auy/dy
-          d(j)=tet1(i,j)/dt
+          d(j)=thetaTemp(i,j)/dt
         enddo !i
 
         a(1)=0.;  b(1)=1.;   c(1)=1.;   d(1)=0.                                        
@@ -487,36 +489,36 @@
         call Tom(1,my,a,b,c,d,e,mi,ma)
 
         do j=1,my
-          tet(i,j)=e(j)
+          thetaN1(i,j)=e(j)
         enddo !i
       enddo
       !!
       do j=2,my-1
-        tet(mx,j)=tet(mx-1,j)
+        thetaN1(mx,j)=thetaN1(mx-1,j)
       enddo
 
       do i=2,mx-1
-        tet(i,1)=tet(i,2)
+        thetaN1(i,1)=thetaN1(i,2)
       enddo                                                
       do i=2,mx-1
-        tet(i,my)=tet(i,my-1)
+        thetaN1(i,my)=thetaN1(i,my-1)
       enddo
       do i=2,i1
-        tet(i,j1)=tet(i,j1-1)
-        tet(i,j2)=tet(i,j2+1)
+        thetaN1(i,j1)=thetaN1(i,j1-1)
+        thetaN1(i,j2)=thetaN1(i,j2+1)
       enddo
       do j=j1,j2
-        tet(i1,j)=tet(i1+1,j)
+        thetaN1(i1,j)=thetaN1(i1+1,j)
       enddo
 
-      tet2=tet-tets
-      tets=tet
+      thetaConvergence=thetaN1-theta
+      theta=thetaN1
     enddo
 
 
-    vis=vi
-    tokN1=tok
-    tets=tet
+    vihr=vihrN1
+    tok=tokN1
+    theta=thetaN1
  
 ! ������ ������
  
@@ -524,121 +526,117 @@
       curPrintIterationNumber=curPrintIterationNumber+printStepNumber
 
       sumTokConvergence=0.
-      sumvi=0.
-      sumtet=0.
+      sumVihrConvergence=0.
+      sumThetaConvergence=0.
 
       do i=2, mx-1
         do j=2, my-1
           sumTokConvergence= sumTokConvergence+abs(tokConvergence(i,j))/dt
-          sumvi= sumvi+abs(vi2(i,j))/dt
-          sumtet= sumtet+abs(tet2(i,j))/dt
+          sumVihrConvergence= sumVihrConvergence+abs(vihrConvergence(i,j))/dt
+          sumThetaConvergence= sumThetaConvergence+abs(thetaConvergence(i,j))/dt
         enddo
       enddo
 
-      write(*,'(I7,3es14.4)') curIterationNum, sumTokConvergence, sumvi, sumtet
+      write(*,'(I7,3es14.4)') curIterationNum, sumTokConvergence, sumVihrConvergence, sumThetaConvergence
     endif 
  
  
     if(curIterationNum<iterationNum) cycle
 
     print*
-    write(*,"('vvod dopol iter=')")
+    write(*,"('Additional number iteration:')")
     read(*,*) itdop
     iterationNum=iterationNum+itdop
 
     if(itdop>0) then
       curPrintIterationNumber=curPrintIterationNumber-printStepNumber
-      write(*,"('vvod shaga cxod=')")
+      write(*,"('New print step number:')")
       read(*,*) printStepNumber
       curPrintIterationNumber=curPrintIterationNumber+printStepNumber
     endif
 
     if(itdop==0) exit
   enddo !while
-    
-    
-  print*,'Name varianta'
 
-  read(*,*)name
+  print*,'Type file prefix'
+  read(*,*) file_prefix
 
-
-  ! sim=Adjustl(sim)
-  open(23,file=trim(name)//' izo_tem_ft_ '//' .dat')
+  open(23,file=trim(file_prefix)//'_iso_theta_tok '//' .dat')
   do i=1,mx
     do j=1,my
       x=(i-1)*dx
       y=(j-1)*dy
-      write(23,'(7es14.4)') x,y, tet (i,j), tok (i,j)
+      write(23,'(7es14.4)') x,y, thetaN1 (i,j), tokN1 (i,j)
     enddo
   enddo
   !!!!
-  open(52,file=trim(name)//' izo_ux_uy_vi '//' .dat')
+  open(52,file=trim(file_prefix)//'_iso_ux_uy_vihr '//' .dat')
 
   do i=1,mx
     do j=1,my-1
       x=(i-1)*dx
       y=(j-1)*dy
-      write(52,'(7es14.4)') x,y, ux(i,j), uy(i,j) ,vi(i,j)
+      write(52,'(7es14.4)') x,y, ux(i,j), uy(i,j) ,vihrN1(i,j)
     enddo
   enddo
 
   !!!
-  open(24,file=trim(name)//' ux nizhnee sechenie'//' .dat')
+  open(24,file=trim(file_prefix)//'_ux_lower_part'//' .dat')
   do j=1,j1
     y=(j-1)*dy
     write(24,'(8es14.4)') y, ux(i1/2,j), ux (i1-1,j)
   enddo
 
-  open(204,file=trim(name)//' ux verhnee sechenie'//' .dat')
+  open(204,file=trim(file_prefix)//'_ux_upper_part'//' .dat')
   do j=j2,my
     y=(j-1)*dy
     write(204,'(8es14.4)') y, ux(i1/2,j), ux (i1-1,j)
   enddo
 
-  open(214,file=trim(name)//' ux obshaya chast' //' .dat')
+  open(214,file=trim(file_prefix)//'_ux_middle_part' //' .dat')
   do j=1,my
     y=(j-1)*dy
     write(214,'(8es14.4)') y, ux((i1+mx)/2,j),ux(2*(i1+mx)/3,j), ux(mx,j) 
   enddo
 
-  open(26,file=trim(name)//' tet nizhnee sechenie'//' .dat')
+  open(26,file=trim(file_prefix)//'_theta_lower_part'//' .dat')
   do j=1,j1
     y=(j-1)*dy
-    write(26,'(8es14.4)') y, tet(i1/2,j), tet (i1-1,j)
+    write(26,'(8es14.4)') y, thetaN1(i1/2,j), thetaN1 (i1-1,j)
   enddo
 
-  open(264,file=trim(name)//' tet verhnee sechenie'//' .dat')
+  open(264,file=trim(file_prefix)//'_theta_upper_part'//' .dat')
   do j=j2,my
     y=(j-1)*dy
-    write(264,'(8es14.4)') y,tet(i1/2,j), tet (i1-1,j)
+    write(264,'(8es14.4)') y,thetaN1(i1/2,j), thetaN1 (i1-1,j)
   enddo
 
-  open(216,file=trim(name)//' tet obshaya chast' //' .dat')
+  open(216,file=trim(file_prefix)//'_theta_middle_part' //' .dat')
   do j=1,my
     y=(j-1)*dy
-    write(216,'(8es14.4)') y, tet((i1+mx)/2,j),tet(2*(i1+mx)/3,j),tet(mx,j) 
+    write(216,'(8es14.4)') y, thetaN1((i1+mx)/2,j),thetaN1(2*(i1+mx)/3,j),thetaN1(mx,j) 
   enddo
 
-  open(27,file=trim(name)//' uy nizhnee sechenie'//' .dat')
+  open(27,file=trim(file_prefix)//'_uy_lower_part'//' .dat')
   do j=1,j1
     y=(j-1)*dy
     write(27,'(8es14.4)') y, uy(i1/2,j), uy (i1-1,j)
   enddo
 
-  open(274,file=trim(name)//' uy verhnee sechenie'//' .dat')
+  open(274,file=trim(file_prefix)//'_uy_upper_part'//' .dat')
   do j=j2,my
     y=(j-1)*dy
     write(274,'(8es14.4)') y, uy(i1/2,j), uy (i1-1,j)
   enddo
 
-  open(217,file=trim(name)//' uy obshaya chast' //' .dat')
+  open(217,file=trim(file_prefix)//'_uy_middle_part' //' .dat')
   do j=1,my
     y=(j-1)*dy
     write(217,'(8es14.4)') y, uy((i1+mx)/2,j),uy(2*(i1+mx)/3,j), uy(mx,j) 
   enddo 
 
-  open (77,file=trim(name)//'_Namelist.dat')
-  write(77,Kanal_plosk) 
+  open (77,file=trim(file_prefix)//'_name_list.dat')
+  write(77,flat_channel) 
 
 end Program
 
