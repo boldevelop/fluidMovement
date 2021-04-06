@@ -1,10 +1,13 @@
   integer,parameter:: mx=201,my=101,ma=max(mx,my),mi=1
 
-  real, dimension(mx,my)::tet,tets,tet1,tet2,vi,vis,vi1,vi2,ft,ft1,ft2,fts,ux,uy
+  real, dimension(mx,my)::tet,tets,tet1,tet2,vi,vis,vi1,vi2,ux,uy
+  real, dimension(mx,my)::tok, tokTemp, tokConvergence, tokN1
   real, dimension(mi:ma)::a,b,c,d,e
-  character(100):: sim ,name
 
-  namelist/Kanal_plosk/ Re,Pr, dt, dl_trub, dx, dy, sumft, sumvi, sumtet
+  character(100):: name
+  integer curIterationNum, printStepNumber, curPrintIterationNumber
+
+  namelist /Kanal_plosk/ Re, Pr, dt, dl_trub, dx, dy, sumTokConvergence, sumvi, sumtet
 
 	!param----------------
   dt=0.002
@@ -28,199 +31,198 @@
   x1=(i1-1)*dx
   y1=(j1-1)*dy
   y2=(j2-1)*dy
-                     
-     !-------------------
-     
+
   do j=2,j1-1
     tet(1,j)=1.
   enddo
-
   do j=j2+1,my-1
     tet(1,j)=0.
   enddo
-
   tets=tet
 
-   !----------------------  
+  ! Скорость на входе 
   do j=2,j1-1
     ux(1,j)=1.
   enddo
   do j=j2+1,my-1
     ux(1,j)=1.
   enddo
-  !--------------------  
+
+  ! Граничные левый нижний вход ток
   do j=1,j1
     y=(j-1)*dy
-    ft(1,j)=y
+    tok(1,j)=y
   enddo
   do i=2,i1
-    ft(i,j1)=ft(1,j1) !!!������������ ������
+    tok(i,j1)=tok(1,j1) ! Нижняя стенка ток
   enddo
     
   do j=j1,j2
-    ft(i1,j)=ft(1,j1)
+    tok(i1,j)=tok(1,j1) ! Средняя стенка ток
   enddo
   do i=1,i1
-    ft(i,j2)=ft(1,j1)
+    tok(i,j2)=tok(1,j1) ! Верхняя средняя стенка ток
   enddo
   
   do j=j2+1,my
-    y=(j-1)*dy
-    ft(1,j)=ft(1,j1)+y-y2 !
+    y=(j-1)*dy ! Верхний вход
+    tok(1,j)=tok(1,j1)+y-y2 ! Сравнить с моей прогой
   enddo
   do i=2,mx
-    ft(i,my)=ft(1,my)
-    ft(i,1)=0.
+    tok(i,my)=tok(1,my) ! Стенка сверху
+    tok(i,1)=0.  ! Стенка снизу
   enddo
-  fts=ft
+  tokN1=tok
     
-!-----------------------
-  
-    
-  write(*,"(' kolichestvo itk='/,)")
-  read(*,*) itk
-  write(*,"(' shag vivoda=',)")
-  read(*,*) ish
-  isht=ish
-  it=0
+  write(*,"('Number of iteration:')")
+  read(*,*) iterationNum
+  write(*,"('Step print:')")
+  read(*,*) printStepNumber
+  curPrintIterationNumber = printStepNumber
+  curIterationNum = 0
             
   !���� �� ������� !--------------------------   
             
-  do while (it<itk)
-    it=it+1        
-
-    ! �������� � 1         
+  do while (curIterationNum < iterationNum)
+    curIterationNum=curIterationNum+1        
+    ! по X
+    ! c j = 2 до j = bottomWallPoint - 1
+    !   i = 1 до i = n       
     do j=2, j1-1
 
       do i=2,mx-1
         a(i)=1/dx2
         c(i)=1/dx2
         b(i)=1/dt+2/dx2
-        d(i)=fts(i,j)/dt-vi(i,j)
+        d(i)=tokN1(i,j)/dt-vi(i,j)
       enddo !i
 
-      a(1)=0.;  b(1)=1.;   c(1)=0.;   d(1)=fts(1,j)
+      a(1)=0.;  b(1)=1.;   c(1)=0.;   d(1)=tokN1(1,j)
       a(mx)=1.; b(mx)=1.;  c(mx)=0.;  d(mx)=0.
 
       call Tom(1,mx,a,b,c,d,e,mi,ma)
       do i=1,mx
-        ft1(i,j)=e(i)
+        tokTemp(i,j)=e(i)
       enddo !i
     enddo
-       
-       
-    ! �������� � 2         
+    ! c j = bottomWallPoint    до j = topWallPoint
+    !   i = rightWallPoint     до i = n    
     do j=j1, j2
 
       do i=i1+1,mx-1
         a(i)=1/dx2
         c(i)=1/dx2
         b(i)=1/dt+2/dx2
-        d(i)=fts(i,j)/dt-vi(i,j)
+        d(i)=tokN1(i,j)/dt-vi(i,j)
       enddo !i
 
-      a(i1)=0.;  b(i1)=1.;   c(i1)=0.;   d(i1)=fts(i1,j)
+      a(i1)=0.;  b(i1)=1.;   c(i1)=0.;   d(i1)=tokN1(i1,j)
       a(mx)=1.; b(mx)=1.;  c(mx)=0.;  d(mx)=0.
 
       call Tom(i1,mx,a,b,c,d,e,mi,ma)
       do i=i1,mx
-        ft1(i,j)=e(i)
+        tokTemp(i,j)=e(i)
       enddo !i
     enddo
-    ! �������� � 3         
+    ! c j = topWallPoint+1 до j = m-1
+    !   i = 1              до i = n     
     do j=j2+1, my-1
       do i=2,mx-1
         a(i)=1/dx2
         c(i)=1/dx2
         b(i)=1/dt+2/dx2
-        d(i)=fts(i,j)/dt-vi(i,j)
+        d(i)=tokN1(i,j)/dt-vi(i,j)
       enddo !i
 
-      a(1)=0.;  b(1)=1.;   c(1)=0.;   d(1)=fts(1,j)
+      a(1)=0.;  b(1)=1.;   c(1)=0.;   d(1)=tokN1(1,j)
       a(mx)=1.; b(mx)=1.;  c(mx)=0.;  d(mx)=0.
 
       call Tom(1,mx,a,b,c,d,e,mi,ma)
       do i=1,mx
-      ft1(i,j)=e(i)
+        tokTemp(i,j)=e(i)
       enddo !i
     enddo   
-    ! �������� � 1 
+    ! по Y
+    ! c i = 2 до i = rightWallPoint
+    ! c j = 1 до j = bottomWallPoint 
     do i=2, i1
 
       do j=2,j1-1                                                                     
         a(j)=1/dy2
         c(j)=1/dy2
         b(j)=1/dt+2/dy2
-        d(j)=ft1(i,j)/dt
+        d(j)=tokTemp(i,j)/dt
       enddo !i
 
       a(1)=0.;  b(1)=1.;   c(1)=0.;   d(1)=0.
-      a(j1)=0.; b(j1)=1.;  c(j1)=0.;  d(j1)=fts(i,j1)
+      a(j1)=0.; b(j1)=1.;  c(j1)=0.;  d(j1)=tokN1(i,j1)
 
       call Tom(1,j1,a,b,c,d,e,mi,ma)
       do j=1,j1
-        ft(i,j)=e(j)
+        tok(i,j)=e(j)
       enddo !i
     enddo 
-    ! �������� � 2
+    ! c i = 2            до i = rightWallPoint
+    ! c j = topWallPoint до j = m
     do i=2, i1
       do j=j2+1,my-1                                                                    
         a(j)=1/dy2
         c(j)=1/dy2
         b(j)=1/dt+2/dy2
-        d(j)=ft1(i,j)/dt
+        d(j)=tokTemp(i,j)/dt
       enddo !i
 
-      a(j2)=0.;  b(j2)=1.;   c(j2)=0.;   d(j2)=fts(i,j2)
-      a(my)=0.; b(my)=1.;  c(my)=0.;  d(my)=fts(i,my)
+      a(j2)=0.;  b(j2)=1.;   c(j2)=0.;   d(j2)=tokN1(i,j2)
+      a(my)=0.; b(my)=1.;  c(my)=0.;  d(my)=tokN1(i,my)
 
       call Tom(j2,my,a,b,c,d,e,mi,ma)
       do j=j2,my
-        ft(i,j)=e(j)
+        tok(i,j)=e(j)
       enddo !i
     enddo 
-    ! �������� � 3
+    ! c i = rightWallPoint + 1 до i = n-1
+    ! c j = 1                  до j = m
     do i=i1+1, mx-1
       do j=2,my-1
         a(j)=1/dy2
         c(j)=1/dy2
         b(j)=1/dt+2/dy2
-        d(j)=ft1(i,j)/dt
+        d(j)=tokTemp(i,j)/dt
       enddo !i
 
-      a(1)=0.;  b(1)=1.;   c(1)=0.;   d(1)=fts(i,1)
-      a(my)=0.; b(my)=1.;  c(my)=0.;  d(my)=fts(i,my)
+      a(1)=0.;  b(1)=1.;   c(1)=0.;   d(1)=tokN1(i,1)
+      a(my)=0.; b(my)=1.;  c(my)=0.;  d(my)=tokN1(i,my)
 
       call Tom(1,my,a,b,c,d,e,mi,ma)
       do j=1,my
-        ft(i,j)=e(j)
+        tok(i,j)=e(j)
       enddo !i
     enddo 
- 
-    ! 
-    !!������� �� ���.     
+
     do j=2, my-1
-      ft(mx,j)=ft(mx-1,j)
+      tok(mx,j)=tok(mx-1,j) ! выход ток
     enddo
-    ft2=ft-fts   
+
+    tokConvergence=tok-tokN1   
   
-    !-------------------------------------------  
     do j=2, my-1
       do i=2,mx-1
+        ! Кроме внутреннего блока из стенок
+        ! Расчитываем скорость
         if(.not.(i<=i1.and.j>=j1.and.j<=j2)) then
-          ux(i,j)=(ft(i,j+1)-ft(i,j-1))/2/dy     
-          uy(i,j)=-(ft(i+1,j)-ft(i-1,j))/2/dx
+          ux(i,j)=(tok(i,j+1)-tok(i,j-1))/2/dy     
+          uy(i,j)=-(tok(i+1,j)-tok(i-1,j))/2/dx
         endif
       enddo
     enddo
 
-    !+++++++++++++++++++++++++++++++++++++++++++++++++++
+    ! Выход для скорости
     do j=2,my-1
         ux(mx,j)=ux(mx-1,j)
         uy(mx,j)=uy(mx-1,j)
     enddo
    
- !-----------------------------------   
+    ! Устанавливаем скорость на стенках блока  
     do i=1, i1
       ux(i,j1)=0.
       uy(i,j1)=0.
@@ -231,7 +233,8 @@
       ux(i1,j)=0.
       uy(i1,j)=0.
     enddo
-    !!!!!!!!!!!!!!!!!!!!!!!!!
+
+    ! Скорость на входе  
     do j=j2+1, my-1
       uy(1,j)=uy(2,j)
     enddo
@@ -239,7 +242,7 @@
       uy(1,j)=uy(2,j)
     enddo
        
-    !  VI
+    !  Вихрь
     !!! x1
     do  j=2, j1-1
       do i=2,mx-1
@@ -271,7 +274,7 @@
         d(i)=vis(i,j)/dt-Gr/Re/Re*(tet(i+1,j)-tet(i-1,j))/2/dx
       enddo !i
 
-      a(i1)=0.;  b(i1)=1.;   c(i1)=0.;   d(i1)=2*(ft(i1+1,j)-ft(i1,j))/dx2                        
+      a(i1)=0.;  b(i1)=1.;   c(i1)=0.;   d(i1)=2*(tok(i1+1,j)-tok(i1,j))/dx2                        
       a(mx)=1.; b(mx)=1.;  c(mx)=0.;  d(mx)=0.
 
       call Tom(i1,mx,a,b,c,d,e,mi,ma)                                                              
@@ -310,8 +313,8 @@
         d(j)=vi1(i,j)/dt
       enddo !i
 
-      a(1)=0;  b(1)=1.;   c(1)=0;   d(1)=2*(ft(i,2)-ft(i,1))/dy2                         
-      a(j1)=0.; b(j1)=1.;  c(j1)=0.;  d(j1)=2*(ft(i,j1-1)-ft(i,j1))/dy2                 
+      a(1)=0;  b(1)=1.;   c(1)=0;   d(1)=2*(tok(i,2)-tok(i,1))/dy2                         
+      a(j1)=0.; b(j1)=1.;  c(j1)=0.;  d(j1)=2*(tok(i,j1-1)-tok(i,j1))/dy2                 
 
       call Tom(1,j1,a,b,c,d,e,mi,ma)
 
@@ -329,8 +332,8 @@
         d(j)=vi1(i,j)/dt
       enddo !i
 
-      a(j2)=0;  b(j2)=1.;   c(j2)=0;   d(j2)=2*(ft(i,j2+1)-ft(i,j2))/dy2                               
-      a(my)=0.; b(my)=1.;  c(my)=0.;  d(my)=2*(ft(i,my-1)-ft(i,my))/dy2
+      a(j2)=0;  b(j2)=1.;   c(j2)=0;   d(j2)=2*(tok(i,j2+1)-tok(i,j2))/dy2                               
+      a(my)=0.; b(my)=1.;  c(my)=0.;  d(my)=2*(tok(i,my-1)-tok(i,my))/dy2
 
       call Tom(j2,my,a,b,c,d,e,mi,ma)                                                             
 
@@ -348,8 +351,8 @@
         d(j)=vi1(i,j)/dt
       enddo !i
 
-      a(1)=0;  b(1)=1.;   c(1)=0;   d(1)=2*(ft(i,2)-ft(i,1))/dy2
-      a(my)=0.; b(my)=1.;  c(my)=0.;  d(my)=2*(ft(i,my-1)-ft(i,my))/dy2
+      a(1)=0;  b(1)=1.;   c(1)=0;   d(1)=2*(tok(i,2)-tok(i,1))/dy2
+      a(my)=0.; b(my)=1.;  c(my)=0.;  d(my)=2*(tok(i,my-1)-tok(i,my))/dy2
 
       call Tom(1,my,a,b,c,d,e,mi,ma)
 
@@ -363,7 +366,7 @@
       vi(mx,j)=vi(mx-1,j)
     enddo
     do j=j1, j2
-      vi(i1,j)=2*(ft(i1+1,j)-ft(i1,j))/dx2
+      vi(i1,j)=2*(tok(i1+1,j)-tok(i1,j))/dx2
     enddo
     vi2=vi-vis  
 
@@ -512,42 +515,42 @@
 
 
     vis=vi
-    fts=ft
+    tokN1=tok
     tets=tet
  
 ! ������ ������
  
-    if(mod(it,isht)==0) then
-      isht=isht+ish
+    if(mod(curIterationNum,curPrintIterationNumber)==0) then
+      curPrintIterationNumber=curPrintIterationNumber+printStepNumber
 
-      sumft=0.
+      sumTokConvergence=0.
       sumvi=0.
       sumtet=0.
 
       do i=2, mx-1
         do j=2, my-1
-          sumft= sumft+abs(ft2(i,j))/dt
+          sumTokConvergence= sumTokConvergence+abs(tokConvergence(i,j))/dt
           sumvi= sumvi+abs(vi2(i,j))/dt
           sumtet= sumtet+abs(tet2(i,j))/dt
         enddo
       enddo
 
-      write(*,'(I7,3es14.4)') it, sumft, sumvi, sumtet
+      write(*,'(I7,3es14.4)') curIterationNum, sumTokConvergence, sumvi, sumtet
     endif 
  
  
-    if(it<itk) cycle
+    if(curIterationNum<iterationNum) cycle
 
     print*
-    write(*,"('vvod dopol iter=',\)")
+    write(*,"('vvod dopol iter=')")
     read(*,*) itdop
-    itk=itk+itdop
+    iterationNum=iterationNum+itdop
 
-    if(itdop>0)then
-      isht=isht-ish
-      write(*,"('vvod shaga cxod=',\)")
-      read(*,*) ish
-      isht=isht+ish
+    if(itdop>0) then
+      curPrintIterationNumber=curPrintIterationNumber-printStepNumber
+      write(*,"('vvod shaga cxod=')")
+      read(*,*) printStepNumber
+      curPrintIterationNumber=curPrintIterationNumber+printStepNumber
     endif
 
     if(itdop==0) exit
@@ -565,7 +568,7 @@
     do j=1,my
       x=(i-1)*dx
       y=(j-1)*dy
-      write(23,'(7es14.4)') x,y, tet (i,j), ft (i,j)
+      write(23,'(7es14.4)') x,y, tet (i,j), tok (i,j)
     enddo
   enddo
   !!!!
