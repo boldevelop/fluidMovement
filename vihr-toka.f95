@@ -123,6 +123,17 @@ program vihrToka
             enddo
         enddo
 
+        ux(n, 2:m-1)=ux(n-1, 2:m-1) ! правый выход
+        uy(n, 2:m-1)=uy(n-1, 2:m-1) ! правый выход
+        ux(1:rightBoundary, bottomWallPoint) = 0 ! Ниэняя внутренняя стенка 
+        uy(1:rightBoundary, bottomWallPoint) = 0 ! Ниэняя внутренняя стенка
+        ux(1:rightBoundary, topWallPoint)    = 0 ! Верхняя внутренняя стенка
+        uy(1:rightBoundary, topWallPoint)    = 0 ! Верхняя внутренняя стенка
+        ux(rightBoundary, bottomWallPoint:topWallPoint) = 0 ! Внутренняя вертикальная стенка
+        uy(rightBoundary, bottomWallPoint:topWallPoint) = 0 ! Внутренняя вертикальная стенка
+        uy(1, 2:bottomWallPoint - 1) = uy(2, 2:bottomWallPoint - 1) ! Вход нижний
+        uy(1, topWallPoint+1:m-1)    = uy(2, topWallPoint+1:m-1) ! Вход верхний
+
         ! по X
         ! c j = 2 до j = bottomWallPoint - 1
         !   i = 1 до i = n
@@ -481,6 +492,21 @@ program vihrToka
         endif
     enddo ! end while
     
+    open(23, file=trim(filePrefix)//'_iso_theta_tok_ux.dat')
+    do i=1, n
+        do j=1, m
+            tempX = (i-1)*dx
+            tempY = (j-1)*dy
+            write(23, '(7es14.4)') tempX, tempY, thetaN1(i,j), tokN1(i,j), ux(i,j)
+        enddo
+    enddo
+
+    open(214, file=trim(filePrefix)//'_theta_ux.dat')
+    do j= 1, m
+        tempY = (j-1)*dy
+        write(214,'(8es14.4)') tempY, thetaN1(n - 1, j), ux(n - 1, j) 
+    enddo
+
     ! Вывод на консоль
     print*,'Enter name of the file'
     ! Считать значение с консоли
