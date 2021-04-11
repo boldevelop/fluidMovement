@@ -1,6 +1,4 @@
 program vihrToka
-    character(150):: name
-
     !        y   ^
     !            '
     !            '
@@ -60,7 +58,7 @@ program vihrToka
     real, dimension(n, m):: Ux = 0, Uy = 0
 
     real, dimension(n):: a=0, b=0, c=0, d=0, e=0
-    real Ux1, Ux2, current_x, current_y, UxAbs, UyAbs
+    real Ux1, Ux2, UxAbs, UyAbs
     integer lowerBoundary, upperBoundary, leftBoundary, rightBoundary
     integer additionalIterationNum, curIterationNum, printStepNumber, curPrintIterationNumber
 
@@ -505,21 +503,6 @@ program vihrToka
     do j= 1, m
         tempY = (j-1)*dy
         write(214,'(8es14.4)') tempY, thetaN1(n - 1, j), ux(n - 1, j) 
-    enddo
-
-    ! Вывод на консоль
-    print*,'Enter name of the file'
-    ! Считать значение с консоли
-    read(*,*) name
-    ! Запись в файл
-    open(23,file=trim(name)//'.dat')
-    do i=1, n
-        do j=1, m
-            current_x = (i-1)*dx
-            current_y = (j-1)*dy
-            write(23,'(3f9.5)') current_x, current_y, tok(i, j)
-            ! 23 format(3f9.5)
-        enddo
     enddo
 
 end program vihrToka

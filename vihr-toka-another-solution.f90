@@ -1,10 +1,10 @@
-  integer,parameter:: mx=201,my=101,ma=max(mx,my),mi=1
+  integer,parameter:: mx=69,my=36,ma=max(mx,my),mi=1
 
-  real, dimension(mx,my)::ux,uy
+  real, dimension(mx,my):: ux,uy
   real, dimension(mx,my):: theta, thetaTemp, thetaN1, thetaConvergence
   real, dimension(mx,my):: vihr, vihrTemp, vihrN1, vihrConvergence
   real, dimension(mx,my):: tok, tokTemp, tokN1, tokConvergence
-  real, dimension(mi:ma)::a,b,c,d,e
+  real, dimension(mi:ma):: a,b,c,d,e
 
   character(100):: file_prefix
   integer curIterationNum, printStepNumber, curPrintIterationNumber
@@ -12,17 +12,17 @@
   namelist /flat_channel/ Re, Pr, dt, pipeLenght, dx, dy, sumTokConvergence, sumVihrConvergence, sumThetaConvergence
 
 	!param----------------
-  dt=0.002
+  dt=0.001
   Gr=0.
   Re=20.
-  Pr=1.
-  y1=0.4
-  y2=0.6
-  x1=0.5
+  Pr=.1
+  y1=1
+  y2=1.5
+  x1=1
 
-  pipeLenght=4.
+  pipeLenght=3.
 
-  dy=1./(my-1)
+  dy=2.5/(my-1)
   dy2=dy*dy
 
   dx=pipeLenght/(mx-1)
@@ -544,7 +544,7 @@
     if(curIterationNum<iterationNum) cycle
 
     print*
-    write(*,"('Additional number iteration:')")
+    write(*,"('Additional number iteration or type 0 for end:')")
     read(*,*) itdop
     iterationNum=iterationNum+itdop
 
@@ -561,7 +561,7 @@
   print*,'Type file prefix'
   read(*,*) file_prefix
 
-  open(23,file=trim(file_prefix)//'_iso_theta_tok '//' .dat')
+  open(23,file=trim(file_prefix)//'_iso_theta_tok.dat')
   do i=1,mx
     do j=1,my
       x=(i-1)*dx
@@ -570,7 +570,7 @@
     enddo
   enddo
   !!!!
-  open(52,file=trim(file_prefix)//'_iso_ux_uy_vihr '//' .dat')
+  open(52,file=trim(file_prefix)//'_iso_ux_uy_vihr.dat')
 
   do i=1,mx
     do j=1,my-1
@@ -581,55 +581,55 @@
   enddo
 
   !!!
-  open(24,file=trim(file_prefix)//'_ux_lower_part'//' .dat')
+  open(24,file=trim(file_prefix)//'_ux_lower_part.dat')
   do j=1,j1
     y=(j-1)*dy
     write(24,'(8es14.4)') y, ux(i1/2,j), ux (i1-1,j)
   enddo
 
-  open(204,file=trim(file_prefix)//'_ux_upper_part'//' .dat')
+  open(204,file=trim(file_prefix)//'_ux_upper_part.dat')
   do j=j2,my
     y=(j-1)*dy
     write(204,'(8es14.4)') y, ux(i1/2,j), ux (i1-1,j)
   enddo
 
-  open(214,file=trim(file_prefix)//'_ux_middle_part' //' .dat')
+  open(214,file=trim(file_prefix)//'_ux_middle_part.dat')
   do j=1,my
     y=(j-1)*dy
     write(214,'(8es14.4)') y, ux((i1+mx)/2,j),ux(2*(i1+mx)/3,j), ux(mx,j) 
   enddo
 
-  open(26,file=trim(file_prefix)//'_theta_lower_part'//' .dat')
+  open(26,file=trim(file_prefix)//'_theta_lower_part.dat')
   do j=1,j1
     y=(j-1)*dy
     write(26,'(8es14.4)') y, thetaN1(i1/2,j), thetaN1 (i1-1,j)
   enddo
 
-  open(264,file=trim(file_prefix)//'_theta_upper_part'//' .dat')
+  open(264,file=trim(file_prefix)//'_theta_upper_part.dat')
   do j=j2,my
     y=(j-1)*dy
     write(264,'(8es14.4)') y,thetaN1(i1/2,j), thetaN1 (i1-1,j)
   enddo
 
-  open(216,file=trim(file_prefix)//'_theta_middle_part' //' .dat')
+  open(216,file=trim(file_prefix)//'_theta_middle_part.dat')
   do j=1,my
     y=(j-1)*dy
     write(216,'(8es14.4)') y, thetaN1((i1+mx)/2,j),thetaN1(2*(i1+mx)/3,j),thetaN1(mx,j) 
   enddo
 
-  open(27,file=trim(file_prefix)//'_uy_lower_part'//' .dat')
+  open(27,file=trim(file_prefix)//'_uy_lower_part.dat')
   do j=1,j1
     y=(j-1)*dy
     write(27,'(8es14.4)') y, uy(i1/2,j), uy (i1-1,j)
   enddo
 
-  open(274,file=trim(file_prefix)//'_uy_upper_part'//' .dat')
+  open(274,file=trim(file_prefix)//'_uy_upper_part.dat')
   do j=j2,my
     y=(j-1)*dy
     write(274,'(8es14.4)') y, uy(i1/2,j), uy (i1-1,j)
   enddo
 
-  open(217,file=trim(file_prefix)//'_uy_middle_part' //' .dat')
+  open(217,file=trim(file_prefix)//'_uy_middle_part.dat')
   do j=1,my
     y=(j-1)*dy
     write(217,'(8es14.4)') y, uy((i1+mx)/2,j),uy(2*(i1+mx)/3,j), uy(mx,j) 
