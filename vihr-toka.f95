@@ -204,9 +204,9 @@ program vihrToka
             do j= lowerBoundary + 1, upperBoundary - 1 
                 Uy = ( tok(i + 1, j) - tok(i - 1, j) ) /2/ dx
                 UyAbs = abs(Uy)
-                a(i) = (UyAbs + Uy)/dy/2 + 1./Re/dy**2
-                c(i) = (UyAbs - Uy)/dy/2 + 1./Re/dy**2
-                b(i) = UyAbs/dy + 2./Re/dy**2 + 1./dt
+                a(j) = (UyAbs + Uy)/dy/2 + 1./Re/dy**2
+                c(j) = (UyAbs - Uy)/dy/2 + 1./Re/dy**2
+                b(j) = UyAbs/dy + 2./Re/dy**2 + 1./dt
                 d(j) = vihrTemp(i, j)/dt
             enddo
 
@@ -233,9 +233,9 @@ program vihrToka
             do j= lowerBoundary + 1, upperBoundary - 1 
                 Uy = ( tok(i + 1, j) - tok(i - 1, j) ) /2/ dx
                 UyAbs = abs(Uy)
-                a(i) = (UyAbs + Uy)/dy/2 + 1./Re/dy**2
-                c(i) = (UyAbs - Uy)/dy/2 + 1./Re/dy**2
-                b(i) = UyAbs/dy + 2./Re/dy**2 + 1./dt
+                a(j) = (UyAbs + Uy)/dy/2 + 1./Re/dy**2
+                c(j) = (UyAbs - Uy)/dy/2 + 1./Re/dy**2
+                b(j) = UyAbs/dy + 2./Re/dy**2 + 1./dt
                 d(j) = vihrTemp(i, j)/dt
             enddo
 
@@ -262,9 +262,9 @@ program vihrToka
             do j= lowerBoundary + 1, upperBoundary - 1 
                 Uy = ( tok(i + 1, j) - tok(i - 1, j) ) /2/ dx
                 UyAbs = abs(Uy)
-                a(i) = (UyAbs + Uy)/dy/2 + 1./Re/dy**2
-                c(i) = (UyAbs - Uy)/dy/2 + 1./Re/dy**2
-                b(i) = UyAbs/dy + 2./Re/dy**2 + 1./dt
+                a(j) = (UyAbs + Uy)/dy/2 + 1./Re/dy**2
+                c(j) = (UyAbs - Uy)/dy/2 + 1./Re/dy**2
+                b(j) = UyAbs/dy + 2./Re/dy**2 + 1./dt
                 d(j) = vihrTemp(i, j)/dt
             enddo
 
