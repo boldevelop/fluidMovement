@@ -1,5 +1,5 @@
 program vihrToka
-    character(100):: name
+    character(150):: name
 
     !        y   ^
     !            '
@@ -40,42 +40,39 @@ program vihrToka
     ! Объявление Тока
     ! tok - функция тока на n
     ! tokTemp - промежуточный слой 
-    ! tokn1 -  функция тока на n+1 слое
-    ! tokConvergence - разница между tokn1 и tok
-    real, dimension(n, m):: tok=0, tokTemp=0, tokn1=0, tokConvergence=0
-    real sumTokConvergence
+    ! tokn1 - функция тока на n+1 слое
+    real, dimension(n, m):: tok=0, tokTemp=0, tokn1=0
 
     ! Объявление Вихря
     ! vihr - вихря на n
     ! vihrTemp - вихря промежуточный слой 
-    ! vihrn1 -  вихря на n+1 слое
-    ! vihrConvergence - разница между vihrn1 и vihr
-    real, dimension(n, m):: vihr=0, vihrTemp=0, vihrn1=0, vihrConvergence=0
-    real sumVihrConvergence
+    ! vihrn1 - вихря на n+1 слое
+    real, dimension(n, m):: vihr=0, vihrTemp=0, vihrn1=0
 
     ! Объявление Температуры
-    ! vihr - вихря на n
-    ! vihrTemp - вихря промежуточный слой 
-    ! vihrn1 -  вихря на n+1 слое
-    ! vihrConvergence - разница между vihrn1 и vihr
+    ! theta - на n
+    ! thetaTemp - промежуточный слой 
+    ! thetaN1 - n+1 слое
+    ! thetaConvergence - разница между thetaN1 и theta
     real, dimension(n, m):: theta=0, thetaTemp=0, thetaN1=0, thetaConvergence=0
-    real sumThetaConvergence
+
+    ! Объявление Поля скорости
+    real, dimension(n, m):: Ux = 0, Uy = 0
 
     real, dimension(n):: a=0, b=0, c=0, d=0, e=0
-    real Ux1, Ux2, current_x, current_y, Ux, UxAbs, Uy, UyAbs
+    real Ux1, Ux2, current_x, current_y, UxAbs, UyAbs
     integer lowerBoundary, upperBoundary, leftBoundary, rightBoundary
     integer additionalIterationNum, curIterationNum, printStepNumber, curPrintIterationNumber
+
+    character(100):: filePrefix
+    write (filePrefix,"('Re', i0, 'Pr', i0, 'Gr', i0)") int(Re), int(Pr), int(Gr)
+    print*,"file name is ", trim(filePrefix)
 
     additionalIterationNum = 0
     Ux1=1
     Ux2=1
     dy = y/(m-1)
     dx = x/(n-1)
-
-    Ux=0
-    UxAbs=0
-    Uy=0
-    UyAbs=0
 
     ! Начальные/граничные условия
     call setBoundaryTokValue(n, m, tok, bottomWallPoint, topWallPoint, rightWallPoint, dy, Ux1, Ux2);
@@ -114,6 +111,17 @@ program vihrToka
         call calcTokY(2, rightWallPoint, topWallPoint, m, n, m, tokn1, tokTemp, tok, dy, dt)
         ! Начальные/граничные условия условия
         call setBoundaryTokValue(n, m, tokn1, bottomWallPoint, topWallPoint, rightWallPoint, dy, Ux1, Ux2);
+        
+        do j=2, m-1
+            do i=2, n-1
+                ! Кроме внутреннего блока из стенок
+                ! Расчитываем скорость
+                if(.not.(i <= rightWallPoint .and. j >= bottomWallPoint .and. j <= topWallPoint)) then
+                    Ux(i,j)=(tokN1(i,j+1)-tokN1(i,j-1))/2/dy     
+                    Uy(i,j)=-(tokN1(i+1,j)-tokN1(i-1,j))/2/dx
+                endif
+            enddo
+        enddo
 
         ! по X
         ! c j = 2 до j = bottomWallPoint - 1
@@ -123,12 +131,11 @@ program vihrToka
             rightBoundary = n
 
             do i=leftBoundary+1, rightBoundary-1
-                Ux = ( tok(i, j + 1) - tok(i, j - 1) ) /2/ dy
-                UxAbs = abs(Ux)
-                a(i) = (UxAbs + Ux)/dx/2 + 1./Re/dx**2
-                c(i) = (UxAbs - Ux)/dx/2 + 1./Re/dx**2
+                UxAbs = abs(Ux(i, j))
+                a(i) = (UxAbs + Ux(i, j))/dx/2 + 1./Re/dx**2
+                c(i) = (UxAbs - Ux(i, j))/dx/2 + 1./Re/dx**2
                 b(i) = UxAbs/dx + 2./Re/dx**2 + 1./dt
-                d(i) = vihr(i, j)/dt !- Gr/Re/Re*(thetaN1(i+1,j)-thetaN1(i-1,j))/2/dx
+                d(i) = vihr(i, j)/dt - Gr/Re/Re*(thetaN1(i+1,j)-thetaN1(i-1,j))/2/dx
             enddo
 
             a(leftBoundary) = 0;  b(leftBoundary)   = 1; c(leftBoundary)  = 0;  d(leftBoundary)  = 0;
@@ -149,12 +156,11 @@ program vihrToka
             rightBoundary = n
 
             do i=leftBoundary+1, rightBoundary-1
-                Ux = ( tok(i, j + 1) - tok(i, j - 1) ) /2/ dy
-                UxAbs = abs(Ux)
-                a(i) = (UxAbs + Ux)/dx/2 + 1./Re/dx**2
-                c(i) = (UxAbs - Ux)/dx/2 + 1./Re/dx**2
+                UxAbs = abs(Ux(i, j))
+                a(i) = (UxAbs + Ux(i, j))/dx/2 + 1./Re/dx**2
+                c(i) = (UxAbs - Ux(i, j))/dx/2 + 1./Re/dx**2
                 b(i) = UxAbs/dx + 2./Re/dx**2 + 1./dt
-                d(i) = vihr(i, j)/dt !- Gr/Re/Re*(thetaN1(i+1,j)-thetaN1(i-1,j))/2/dx
+                d(i) = vihr(i, j)/dt - Gr/Re/Re*(thetaN1(i+1,j)-thetaN1(i-1,j))/2/dx
             enddo
 
             a(leftBoundary) = 0;  b(leftBoundary)   = 1; c(leftBoundary)  = 0;  
@@ -177,12 +183,11 @@ program vihrToka
             rightBoundary = n
 
             do i=leftBoundary+1, rightBoundary-1
-                Ux = ( tok(i, j + 1) - tok(i, j - 1) ) /2/ dy
-                UxAbs = abs(Ux)
-                a(i) = (UxAbs + Ux)/dx/2 + 1./Re/dx**2
-                c(i) = (UxAbs - Ux)/dx/2 + 1./Re/dx**2
+                UxAbs = abs(Ux(i, j))
+                a(i) = (UxAbs + Ux(i, j))/dx/2 + 1./Re/dx**2
+                c(i) = (UxAbs - Ux(i, j))/dx/2 + 1./Re/dx**2
                 b(i) = UxAbs/dx + 2./Re/dx**2 + 1./dt
-                d(i) = vihr(i, j)/dt !- Gr/Re/Re*(thetaN1(i+1,j)-thetaN1(i-1,j))/2/dx
+                d(i) = vihr(i, j)/dt - Gr/Re/Re*(thetaN1(i+1,j)-thetaN1(i-1,j))/2/dx
             enddo
 
             a(leftBoundary) = 0;  b(leftBoundary)   = 1; c(leftBoundary)  = 0;  d(leftBoundary)  = 0;
@@ -203,11 +208,10 @@ program vihrToka
             lowerBoundary = 1
             upperBoundary = bottomWallPoint;
 
-            do j= lowerBoundary + 1, upperBoundary - 1 
-                Uy = ( tok(i + 1, j) - tok(i - 1, j) ) /2/ dx
-                UyAbs = abs(Uy)
-                a(j) = (UyAbs + Uy)/dy/2 + 1./Re/dy**2
-                c(j) = (UyAbs - Uy)/dy/2 + 1./Re/dy**2
+            do j= lowerBoundary + 1, upperBoundary - 1
+                UyAbs = abs(Uy(i, j))
+                a(j) = (UyAbs + Uy(i, j))/dy/2 + 1./Re/dy**2
+                c(j) = (UyAbs - Uy(i, j))/dy/2 + 1./Re/dy**2
                 b(j) = UyAbs/dy + 2./Re/dy**2 + 1./dt
                 d(j) = vihrTemp(i, j)/dt
             enddo
@@ -233,10 +237,9 @@ program vihrToka
             upperBoundary = m;
 
             do j= lowerBoundary + 1, upperBoundary - 1 
-                Uy = ( tok(i + 1, j) - tok(i - 1, j) ) /2/ dx
-                UyAbs = abs(Uy)
-                a(j) = (UyAbs + Uy)/dy/2 + 1./Re/dy**2
-                c(j) = (UyAbs - Uy)/dy/2 + 1./Re/dy**2
+                UyAbs = abs(Uy(i, j))
+                a(j) = (UyAbs + Uy(i, j))/dy/2 + 1./Re/dy**2
+                c(j) = (UyAbs - Uy(i, j))/dy/2 + 1./Re/dy**2
                 b(j) = UyAbs/dy + 2./Re/dy**2 + 1./dt
                 d(j) = vihrTemp(i, j)/dt
             enddo
@@ -262,10 +265,9 @@ program vihrToka
             upperBoundary = m;
 
             do j= lowerBoundary + 1, upperBoundary - 1 
-                Uy = ( tok(i + 1, j) - tok(i - 1, j) ) /2/ dx
-                UyAbs = abs(Uy)
-                a(j) = (UyAbs + Uy)/dy/2 + 1./Re/dy**2
-                c(j) = (UyAbs - Uy)/dy/2 + 1./Re/dy**2
+                UyAbs = abs(Uy(i, j))
+                a(j) = (UyAbs + Uy(i, j))/dy/2 + 1./Re/dy**2
+                c(j) = (UyAbs - Uy(i, j))/dy/2 + 1./Re/dy**2
                 b(j) = UyAbs/dy + 2./Re/dy**2 + 1./dt
                 d(j) = vihrTemp(i, j)/dt
             enddo
@@ -288,10 +290,173 @@ program vihrToka
         ! Начальные/граничные условия условия левая стенка
         call setBoundaryVihrValue(n, m, vihrn1, tok, bottomWallPoint, topWallPoint, rightWallPoint, dy, dx);
 
+        ! Температура -------------
+        do k = 1,3
+            ! по X
+            ! c j = 2 до j = bottomWallPoint - 1
+            !   i = 1 до i = n
+            do j=2, bottomWallPoint-1
+                leftBoundary = 1
+                rightBoundary = n
+
+                do i=leftBoundary+1, rightBoundary-1
+                    UxAbs = abs(Ux(i, j))
+                    a(i) = (UxAbs + Ux(i, j))/dx/2 + 1/Re/Pr/dx**2
+                    c(i) = (UxAbs - Ux(i, j))/dx/2 + 1./Re/Pr/dx**2
+                    b(i) = UxAbs/dx + 2/Re/Pr/dx**2 + 1/dt
+                    d(i) = theta(i,j)/dt
+                enddo
+
+                a(leftBoundary)  = 0; b(leftBoundary)  =1; c(leftBoundary) =  0; d(leftBoundary)  = 1;                
+                a(rightBoundary) = 1; b(rightBoundary) =1; c(rightBoundary) = 0; d(rightBoundary) = 0;
+
+                call Tom(leftBoundary, rightBoundary, a, b, c, d, e, 1, max(n,m))
+
+                ! Присваивам в промежуточный слой
+                do i=leftBoundary, rightBoundary
+                    thetaTemp(i, j) = e(i)
+                enddo
+            enddo
+            ! c j = bottomWallPoint    до j = topWallPoint
+            !   i = rightWallPoint     до i = n
+            do j=bottomWallPoint, topWallPoint
+                leftBoundary = rightWallPoint
+                rightBoundary = n
+
+                do i=leftBoundary+1, rightBoundary-1
+                    UxAbs = abs(Ux(i, j))
+                    a(i) = (UxAbs + Ux(i, j))/dx/2 + 1/Re/Pr/dx**2
+                    c(i) = (UxAbs - Ux(i, j))/dx/2 + 1./Re/Pr/dx**2
+                    b(i) = UxAbs/dx + 2/Re/Pr/dx**2 + 1/dt
+                    d(i) = theta(i,j)/dt
+                enddo
+
+                a(leftBoundary)  = 0; b(leftBoundary)  =1; c(leftBoundary) =  1; d(leftBoundary)  = 1;                
+                a(rightBoundary) = 1; b(rightBoundary) =1; c(rightBoundary) = 0; d(rightBoundary) = 0;
+
+                call Tom(leftBoundary, rightBoundary, a, b, c, d, e, 1, max(n,m))
+
+                ! Присваивам в промежуточный слой
+                do i=leftBoundary, rightBoundary
+                    thetaTemp(i, j) = e(i)
+                enddo
+            enddo
+            ! c j = topWallPoint+1 до j = m-1
+            !   i = 1              до i = n
+            do j=topWallPoint+1, m-1
+                leftBoundary = 1
+                rightBoundary = n
+
+                do i=leftBoundary+1, rightBoundary-1
+                    UxAbs = abs(Ux(i, j))
+                    a(i) = (UxAbs + Ux(i, j))/dx/2 + 1/Re/Pr/dx**2
+                    c(i) = (UxAbs - Ux(i, j))/dx/2 + 1./Re/Pr/dx**2
+                    b(i) = UxAbs/dx + 2/Re/Pr/dx**2 + 1/dt
+                    d(i) = theta(i,j)/dt
+                enddo
+
+                a(leftBoundary)  = 0; b(leftBoundary)  =1; c(leftBoundary) =  0; d(leftBoundary)  = 0;                
+                a(rightBoundary) = 1; b(rightBoundary) =1; c(rightBoundary) = 0; d(rightBoundary) = 0;
+
+                call Tom(leftBoundary, rightBoundary, a, b, c, d, e, 1, max(n,m))
+
+                ! Присваивам в промежуточный слой
+                do i=leftBoundary, rightBoundary
+                    thetaTemp(i, j) = e(i)
+                enddo
+            enddo
+            ! по Y
+            ! c i = 2 до i = rightWallPoint
+            ! c j = 1 до j = bottomWallPoint 
+            do i=2, rightWallPoint
+                lowerBoundary = 1
+                upperBoundary = bottomWallPoint;
+
+                do j= lowerBoundary + 1, upperBoundary - 1
+                    UyAbs = abs(Uy(i, j))
+                    a(j)= (UyAbs + Uy(i, j))/dy/2 + 1/Re/Pr/dy**2
+                    c(j)= (UyAbs - Uy(i, j))/dy/2 + 1/Re/Pr/dy**2
+                    b(j)= UyAbs/dy + 2./Re/Pr/dy**2 + 1./dt
+                    d(j)= thetaTemp(i,j)/dt
+                enddo
+
+                a(lowerBoundary) = 0; b(lowerBoundary) = 1; c(lowerBoundary) = 1; d(lowerBoundary) = 0;                     
+                a(upperBoundary) = 1; b(upperBoundary) = 1; c(upperBoundary) = 0; d(upperBoundary) = 0; 
+
+                call Tom(lowerBoundary, upperBoundary, a, b, c, d, e, 1, max(n,m))
+
+                do j= lowerBoundary, upperBoundary
+                    thetaN1(i,j) = e(j)
+                enddo
+            enddo
+            ! c i = rightWallPoint + 1 до i = n-1
+            ! c j = 1                  до j = m
+            do i=rightWallPoint + 1, n-1
+                lowerBoundary = 1
+                upperBoundary = m;
+
+                do j= lowerBoundary + 1, upperBoundary - 1 
+                    UyAbs = abs(Uy(i, j))
+                    a(j)= (UyAbs + Uy(i, j))/dy/2 + 1/Re/Pr/dy**2
+                    c(j)= (UyAbs - Uy(i, j))/dy/2 + 1/Re/Pr/dy**2
+                    b(j)= UyAbs/dy + 2./Re/Pr/dy**2 + 1./dt
+                    d(j)= thetaTemp(i,j)/dt
+                enddo
+
+                a(lowerBoundary) = 0; b(lowerBoundary) = 1; c(lowerBoundary) = 1; d(lowerBoundary) = 0; 
+                a(upperBoundary) = 1; b(upperBoundary) = 1; c(upperBoundary) = 0; d(upperBoundary) = 0; 
+
+                call Tom(lowerBoundary, upperBoundary, a, b, c, d, e, 1, max(n,m))
+
+                do j= lowerBoundary, upperBoundary
+                    thetaN1(i,j) = e(j)
+                enddo
+            enddo
+            ! c i = 2            до i = rightWallPoint
+            ! c j = topWallPoint до j = m
+            do i=2, rightWallPoint
+                lowerBoundary = topWallPoint
+                upperBoundary = m;
+
+                do j= lowerBoundary + 1, upperBoundary - 1
+                    UyAbs = abs(Uy(i, j))
+                    a(j)= (UyAbs + Uy(i, j))/dy/2 + 1/Re/Pr/dy**2
+                    c(j)= (UyAbs - Uy(i, j))/dy/2 + 1/Re/Pr/dy**2
+                    b(j)= UyAbs/dy + 2./Re/Pr/dy**2 + 1./dt
+                    d(j)= thetaTemp(i,j)/dt
+                enddo
+
+                a(lowerBoundary) = 0; b(lowerBoundary) = 1; c(lowerBoundary) = 1; d(lowerBoundary) = 0; 
+                a(upperBoundary) = 1; b(upperBoundary) = 1; c(upperBoundary) = 0; d(upperBoundary) = 0; 
+
+                call Tom(lowerBoundary, upperBoundary, a, b, c, d, e, 1, max(n,m))
+
+                do j= lowerBoundary, upperBoundary
+                    thetaN1(i,j) = e(j)
+                enddo
+            enddo
+
+            ! Граничные
+            thetaN1(n, 2:m-1) = thetaN1(n-1, 2:m-1) ! правый выход
+            thetaN1(2:n-1, 1) = thetaN1(2:n-1, 2) ! нижняя стенка
+            thetaN1(2:n-1, m) = thetaN1(2:n-1, m-1) ! Верхняя стенка
+            thetaN1(2:rightBoundary, bottomWallPoint) = thetaN1(2:rightBoundary, bottomWallPoint - 1) ! нижняя внутренняя стенка
+            thetaN1(2:rightBoundary, topWallPoint)    = thetaN1(2:rightBoundary, topWallPoint + 1) ! верхняя внутренняя стенка
+
+            do j=bottomWallPoint, topWallPoint
+                thetaN1(rightWallPoint, j) = thetaN1(rightWallPoint+1, j) ! внутренняя вертикальная стенка
+            enddo
+
+            thetaConvergence=thetaN1-theta
+            theta=thetaN1
+        enddo
+        ! Температура -------------
+
+
         ! Выводим результаты на определенной введенной итерации
         if (mod(curIterationNum,curPrintIterationNumber) == 0) then
             curPrintIterationNumber = curPrintIterationNumber + printStepNumber
-            call calcConvergence(n, m, dt, curIterationNum, tok, tokn1, vihr, vihrn1);
+            call calcConvergence(n, m, dt, curIterationNum, tok, tokn1, vihr, vihrn1, thetaConvergence);
         endif
 
         ! Переприсваиваем слои
@@ -373,27 +538,27 @@ subroutine PrintArray(n, m, arr)
 
 endsubroutine
 
-subroutine calcConvergence(n, m, dt, curIterationNum, tok, tokn1, vihr, vihrn1)
+subroutine calcConvergence(n, m, dt, curIterationNum, tok, tokn1, vihr, vihrn1, thetaConvergence)
     integer n, m, curIterationNum
-    real, dimension(n, m):: tok, tokn1, vihr, vihrn1
+    real, dimension(n, m):: tok, tokn1, vihr, vihrn1, thetaConvergence
     real, dimension(n, m):: tokConvergence, vihrConvergence
-    real sumTokConvergence, sumVihrConvergence
+    real sumTokConvergence, sumVihrConvergence, sumThetaConvergence
     tokConvergence = tokn1 - tok
     vihrConvergence = vihrn1 - vihr
 
     sumTokConvergence = 0.
     sumVihrConvergence = 0.
-    ! sumThetaConvergence=0.
+    sumThetaConvergence=0.
 
     do i=2, n-1
         do j=2, m-1
         sumTokConvergence = sumTokConvergence + abs(tokConvergence(i,j))/dt
         sumVihrConvergence = sumVihrConvergence + abs(vihrConvergence(i,j))/dt
-        ! sumThetaConvergence = sumThetaConvergence + abs(thetaConvergence(i,j))/dt
+        sumThetaConvergence = sumThetaConvergence + abs(thetaConvergence(i,j))/dt
         enddo
     enddo 
 
-    write(*,'(I7,3es14.4)') curIterationNum, sumTokConvergence, sumVihrConvergence !, sumThetaConvergence
+    write(*,'(I7,3es14.4)') curIterationNum, sumTokConvergence, sumVihrConvergence, sumThetaConvergence
 endsubroutine
 
 subroutine setBoundaryTokValue(n, m, tok, bottomWallPoint, topWallPoint, rightWallPoint, dy, Ux1, Ux2)
